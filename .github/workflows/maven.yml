@@ -5,7 +5,7 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ trunk ]
+    branches: [ "t*" ]
   pull_request:
     branches: [ trunk ]
 
@@ -24,3 +24,11 @@ jobs:
         cache: maven
     - name: Build with Maven
       run: mvn -B package --file pom.xml
+    - name: Install git-cliff
+      run: >-
+        mkdir -p /home/runner/.local/bin
+        && curl -L -o /tmp/git-cliff.tar.gz https://github.com/orhun/git-cliff/releases/download/v0.5.0/git-cliff-0.5.0-x86_64-unknown-linux-gnu.tar.gz
+        && tar -zxf /tmp/git-cliff.tar.gz -C /tmp
+        && cp /tmp/git-cliff-0.5.0/git-cliff /home/runner/.local/bin/
+    - name: Run git-cliff
+      run: git-cliff
