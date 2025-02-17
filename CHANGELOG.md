@@ -2,6 +2,109 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.9.0](https://github.com/ngeor/kamino/compare/libs/java/v4.8.0...libs/java/v4.9.0) - 2024-02-27
+
+### Features
+
+* Added openrewrite
+
+### Miscellaneous Tasks
+
+* Added badges
+* Added dependency management for `com.puppycrawl.tools:checkstyle`
+
+### Dependencies
+
+* Upgrade assertJ to 3.25.3
+* Upgrade checkstyle to 10.13.0
+* Upgrade jUnit to 5.10.2
+* Upgrade native maven plugin to 0.10.1
+* Upgrade sortpom maven plugin to 3.4.0
+* Upgrade javadoc maven plugin to 3.6.3
+* Upgrade source maven plugin to 3.3.0
+* Upgrade shade maven plugin to 3.5.2
+
+## [4.8.0](https://github.com/ngeor/kamino/compare/libs/java/v4.7.1...libs/java/v4.8.0) - 2024-02-23
+
+### Features
+
+* sortpom tweaks
+* Add dependency management for commons-io, commons-lang3, jsr305
+
+### Miscellaneous Tasks
+
+* Regenerate templates
+* Use snapshot version of checkstyle rules, apply spotless to all files for now
+* Switch to latest snapshot version of checkstyle-rules
+* Switch to checkstyle rules 7.0.0
+
+### Dependencies
+
+* Upgrade to Mockito 5.10.0
+
+## [4.7.1](https://github.com/ngeor/kamino/compare/libs/java/v4.7.0...libs/java/v4.7.1) - 2024-02-15
+
+### Fixes
+
+* Removed shade and native profiles from parent pom, broke libs
+
+## [4.7.0](https://github.com/ngeor/kamino/compare/libs/java/v4.6.0...libs/java/v4.7.0) - 2024-02-14
+
+### Features
+
+* Introducing yak4j-argparse library
+
+## [4.6.0](https://github.com/ngeor/kamino/compare/libs/java/v4.5.0...libs/java/v4.6.0) - 2024-02-13
+
+### Features
+
+* Using native image plugin
+
+### Miscellaneous Tasks
+
+* Use `com.github.ngeor:java` as the parent pom everywhere
+
+## [4.5.0](https://github.com/ngeor/kamino/compare/libs/java/v4.4.0...libs/java/v4.5.0) - 2024-02-10
+
+### Features
+
+* Added spotless plugin management
+
+### Miscellaneous Tasks
+
+* Configure sortpom to not expand empty elements
+
+## [4.4.0](https://github.com/ngeor/kamino/compare/libs/java/v4.3.0...libs/java/v4.4.0) - 2024-02-10
+
+### Features
+
+* Adding root pom (#11)
+* Add dependency management for common test libraries
+
+### Miscellaneous Tasks
+
+* Delete old .github and scripts folders
+* Keeping only root .editorconfig, deleting the rest
+* Keeping only root .gitignore, deleting the rest
+* Moved .gitattributes to the root folder
+
+## [4.3.0](https://github.com/ngeor/kamino/compare/libs/java/v4.2.1...libs/java/v4.3.0) - 2024-01-30
+
+### Features
+
+* Added plugin management for maven source, javadoc and deploy plugins
+
+### Fixes
+
+* use maven effective pom to determine java version
+
+## [4.2.1] - 2024-01-28
+
+### Miscellaneous Tasks
+
+* Add 'libs/java/' from commit '4247ca588e52b464446404a234665da63205ee88'
+* Adjusted imported code
+
 ## [4.2.0] - 2024-01-26
 
 ### Miscellaneous Tasks
