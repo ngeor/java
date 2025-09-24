@@ -16,7 +16,8 @@ jobs:
         cache: 'maven'
     - run: >-
         ./scripts/release.py
-        --gpg-key ${{ secrets.GPG_KEY }}
+        --gpg-key-file ./scripts/keys.asc
+        --gpg-key-name ${{ secrets.GPG_KEY }}
         --gpg-passphrase ${{ secrets.GPG_PASSPHRASE }}
         --maven-username ${{ secrets.OSSRH_USERNAME }}
         --maven-password ${{ secrets.OSSRH_PASSWORD }}
