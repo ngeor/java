@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.5] - 2025-09-24
+
+### Bug Fixes
+
+- Switch to PIPE
+
 ## [4.9.4] - 2025-09-24
 
 ### Miscellaneous Tasks
