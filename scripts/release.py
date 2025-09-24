@@ -70,18 +70,14 @@ def perform_release(gpg_key, gpg_passphrase, maven_username, maven_password):
             <password>{maven_password}</password>
         </server>
     </servers>
-    <profiles>
-        <profile>
-            <id>gpg</id>
-            <properties>
-                <gpg.keyname>{gpg_key}</gpg.keyname>
-                <gpg.passphrase>{gpg_passphrase}</gpg.passphrase>
-            </properties>
-        </profile>
-    </profiles>
 </settings>
             """
             )
+        # create a new env dictionary to hold the gpg passphrase
+        # as per https://maven.apache.org/plugins/maven-gpg-plugin/sign-mojo.html
+        # that is the best practice and the gpg.passphrase property is deprecated
+        new_env = os.environ.copy()
+        new_env["MAVEN_GPG_PASSPHRASE"] = gpg_passphrase
         subprocess.run(
             [
                 "mvn",
@@ -104,9 +100,11 @@ def perform_release(gpg_key, gpg_passphrase, maven_username, maven_password):
                 # skip sortpom
                 "-Dsort.skip=true",
                 "-Pgpg",
+                f"-Dgpg.keyname={gpg_key}"
                 "deploy",
             ],
             check=True,
+            env=new_env
         )
 
 
