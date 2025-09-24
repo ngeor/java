@@ -136,7 +136,7 @@ def gpg_import_key(gpg_passphrase, key_file):
         stdout=subprocess.PIPE,
     )
     p2 = subprocess.Popen(
-        ["gpg", "--batch", "--import"], stdin=p1.stdout, stdout=subprocess.STDOUT
+        ["gpg", "--batch", "--import"], stdin=p1.stdout, stdout=subprocess.PIPE
     )
     p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     p2.communicate()
