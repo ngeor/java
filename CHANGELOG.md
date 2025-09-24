@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.6] - 2025-09-24
+
+### Features
+
+- Making release output quieter
+
 ## [4.9.5] - 2025-09-24
 
 ### Bug Fixes
