@@ -1,6 +1,16 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.4] - 2025-09-24
+
+### Miscellaneous Tasks
+
+- Added Pipfile for release.py
+
+### Refactor
+
+- Move all release logic into release.py
+
 ## [4.9.3] - 2025-09-24
 
 ### Miscellaneous Tasks
