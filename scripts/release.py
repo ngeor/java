@@ -100,11 +100,11 @@ def perform_release(gpg_key, gpg_passphrase, maven_username, maven_password):
                 # skip sortpom
                 "-Dsort.skip=true",
                 "-Pgpg",
-                f"-Dgpg.keyname={gpg_key}"
+                f"-Dgpg.keyname={gpg_key}",
                 "deploy",
             ],
             check=True,
-            env=new_env
+            env=new_env,
         )
 
 
@@ -135,7 +135,9 @@ def gpg_import_key(gpg_passphrase, key_file):
         stdout=subprocess.PIPE,
     )
     p2 = subprocess.Popen(
-        ["gpg", "--batch", "--import", "--quiet"], stdin=p1.stdout, stdout=subprocess.PIPE
+        ["gpg", "--batch", "--import", "--quiet"],
+        stdin=p1.stdout,
+        stdout=subprocess.PIPE,
     )
     p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     p2.communicate()
