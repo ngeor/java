@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.9] - 2025-09-24
+
+### Features
+
+- [**breaking**] Support custom location for `keys.asc` and `pom.xml`
+
 ## [4.9.7] - 2025-09-24
 
 ### Bug Fixes
