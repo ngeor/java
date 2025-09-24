@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.3] - 2025-09-24
+
+### Miscellaneous Tasks
+
+- Migrate from OSSRH to Central Maven
+- Updated changelog
+
 ## [4.9.2] - 2025-02-24
 
 ### Bug Fixes
