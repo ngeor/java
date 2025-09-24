@@ -85,6 +85,7 @@ def perform_release(gpg_key, gpg_passphrase, maven_username, maven_password):
         subprocess.run(
             [
                 "mvn",
+                "-ntp",
                 "-B",
                 "-s",
                 settings_xml_file,
@@ -136,7 +137,7 @@ def gpg_import_key(gpg_passphrase, key_file):
         stdout=subprocess.PIPE,
     )
     p2 = subprocess.Popen(
-        ["gpg", "--batch", "--import"], stdin=p1.stdout, stdout=subprocess.PIPE
+        ["gpg", "--batch", "--import", "--quiet"], stdin=p1.stdout, stdout=subprocess.PIPE
     )
     p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
     p2.communicate()
