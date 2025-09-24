@@ -34,3 +34,5 @@ release-pom.xml
 release.properties
 dependency-reduced-pom.xml
 scripts/yak4j-cli.sh
+
+.vscode/

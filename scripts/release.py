@@ -15,9 +15,7 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(description="Creates a release of a Maven library")
     parser.add_argument("--gpg-key", help="GPG key", required=True)
-    parser.add_argument(
-        "--gpg-passphrase", help="GPG passphrase", required=True
-    )
+    parser.add_argument("--gpg-passphrase", help="GPG passphrase", required=True)
     parser.add_argument(
         "--maven-username",
         help="The username to use for publishing the release to Maven",
@@ -33,6 +31,8 @@ def parse_args():
 
 def release(args):
     try:
+        gpg_list_keys()
+        gpg_import_key(args.gpg_passphrase, "scripts/keys.asc")
         perform_release(
             args.gpg_key, args.gpg_passphrase, args.maven_username, args.maven_password
         )
@@ -88,15 +88,60 @@ def perform_release(gpg_key, gpg_passphrase, maven_username, maven_password):
                 "-B",
                 "-s",
                 settings_xml_file,
+                # skip surefire tests
                 "-DskipTests=true",
+                # skip failsafe tests
+                "-DskipITs=true",
+                # skip checkstyle
                 "-Dcheckstyle.skip=true",
+                # skip jacoco
                 "-Djacoco.skip=true",
+                # skip invoker
                 "-Dinvoker.skip=true",
+                # skip spotless
+                "-Dspotless.check.skip=true",
+                # skip sortpom
+                "-Dsort.skip=true",
                 "-Pgpg",
                 "deploy",
             ],
             check=True,
         )
+
+
+def gpg_list_keys():
+    """
+    Lists the GPG keys.
+    This is mainly used as a workaround to prime the gpg folders before importing the keys.
+    """
+    subprocess.run(["gpg", "--list-keys"], check=True)
+
+
+def gpg_import_key(gpg_passphrase, key_file):
+    """
+    Imports the GPG key.
+    Equivalent shell:
+    `gpg --batch --yes --passphrase=${{ secrets.GPG_PASSPHRASE }} --output - scripts/keys.asc | gpg --batch --import`
+    """
+    p1 = subprocess.Popen(
+        [
+            "gpg",
+            "--batch",
+            "--yes",
+            f"--passphrase={gpg_passphrase}",
+            "--output",
+            "-",
+            key_file,
+        ],
+        stdout=subprocess.PIPE,
+    )
+    p2 = subprocess.Popen(
+        ["gpg", "--batch", "--import"], stdin=p1.stdout, stdout=subprocess.STDOUT
+    )
+    p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
+    p2.communicate()
+    if p2.returncode != 0:
+        raise ValueError("Could not import GPG key")
 
 
 if __name__ == "__main__":

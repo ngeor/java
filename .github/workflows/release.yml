@@ -14,9 +14,6 @@ jobs:
         java-version: '21'
         distribution: 'zulu'
         cache: 'maven'
-    # workaround to prime the gpg folders
-    - run: gpg --list-keys
-    - run: gpg --batch --yes --passphrase=${{ secrets.GPG_PASSPHRASE }} --output - scripts/keys.asc | gpg --batch --import
     - run: >-
         ./scripts/release.py
         --gpg-key ${{ secrets.GPG_KEY }}
