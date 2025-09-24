@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.9.7] - 2025-09-24
+
+### Bug Fixes
+
+- Use MAVEN_GPG_PASSPHRASE env variable
+
 ## [4.9.6] - 2025-09-24
 
 ### Features
