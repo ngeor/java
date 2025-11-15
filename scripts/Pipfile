@@ -4,10 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+requests = "2.32.5"
+PyNaCl = "1.6.1"
 
 [dev-packages]
 black = "*"
 
 [requires]
 python_version = "3.13"
-python_full_version = "3.13.7"
+python_full_version = "3.13.9"
