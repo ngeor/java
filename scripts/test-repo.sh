@@ -16,6 +16,7 @@ POM_TOKENS=()
 NEGATE=0
 ORIGIN=0
 HAS_TAGS=0
+STAGED_DIFF=0
 
 while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --sonatype )
@@ -48,6 +49,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --has-tags )
         HAS_TAGS=1
         ;;
+    --staged-diff )
+        STAGED_DIFF=1
+        ;;
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
@@ -77,6 +81,24 @@ if [[ $HAS_TAGS -eq 1 ]]; then
     # 0 if it has tags, non-zero if it does not have tags
     GIT_RESULT=$?
     if [[ $NEGATE -eq 0 ]]; then
+        exit $GIT_RESULT
+    else
+        if [[ $GIT_RESULT -eq 0 ]]; then
+            exit 1
+        else
+            exit 0
+        fi
+    fi
+fi
+
+if [[ $STAGED_DIFF -eq 1 ]]; then
+    # special, does not combine with others
+    git -C $1 diff --quiet --staged
+    # 0 if no changes, 1 if a diff exists
+    GIT_RESULT=$?
+    if [[ $NEGATE -ne 0 ]]; then
+        # negate by returning as-is:
+        # 0 means no changes, so it will match only those that have no changes
         exit $GIT_RESULT
     else
         if [[ $GIT_RESULT -eq 0 ]]; then
