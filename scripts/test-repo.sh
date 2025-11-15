@@ -3,6 +3,14 @@
 # Use with find in this way:
 #
 # find . -type d -depth 1 -exec ./java/scripts/test-repo.sh {} \; -print
+#
+# Can also be used multiple times:
+# find . -type d -depth 1 \
+#   Exclude multi-module projects
+#   -exec ./java/scripts/test-repo.sh -n --modules {} \;
+#   Exclude projects that already have the sortpom plugin
+#   -exec ./java/scripts/test-repo.sh -n -c sort \{\} \; \
+#   -print
 
 POM_TOKENS=()
 NEGATE=0
@@ -22,6 +30,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
         ;;
     --spring )
         POM_TOKENS+=("spring")
+        ;;
+    --modules )
+        POM_TOKENS+=("<modules>")
         ;;
     -c | --custom )
         shift; POM_TOKENS+=($1)
