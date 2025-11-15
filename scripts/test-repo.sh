@@ -15,6 +15,7 @@
 POM_TOKENS=()
 NEGATE=0
 ORIGIN=0
+HAS_TAGS=0
 
 while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --sonatype )
@@ -44,6 +45,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --origin )
         ORIGIN=1
         ;;
+    --has-tags )
+        HAS_TAGS=1
+        ;;
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
@@ -54,6 +58,23 @@ fi
 if [[ $ORIGIN -eq 1 ]]; then
     # special, does not combine with others
     git -C $1 remote get-url origin >/dev/null 2>&1
+    # 0 if it has a remote, non-zero if it does not have a remote
+    GIT_RESULT=$?
+    if [[ $NEGATE -eq 0 ]]; then
+        exit $GIT_RESULT
+    else
+        if [[ $GIT_RESULT -eq 0 ]]; then
+            exit 1
+        else
+            exit 0
+        fi
+    fi
+fi
+
+if [[ $HAS_TAGS -eq 1 ]]; then
+    # special, does not combine with others
+    git -C $1 tag | grep -q v
+    # 0 if it has tags, non-zero if it does not have tags
     GIT_RESULT=$?
     if [[ $NEGATE -eq 0 ]]; then
         exit $GIT_RESULT
