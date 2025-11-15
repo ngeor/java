@@ -19,5 +19,7 @@ buildNumber.properties
 
 # End of https://github.com/github/gitignore/blob/main/Maven.gitignore
 
+*.iml
 .idea/
 .vscode/
+pom.xml.bak
