@@ -22,6 +22,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --spring )
         POM_TOKENS+=("spring")
         ;;
+    -c | --custom )
+        shift; POM_TOKENS+=($1)
+        ;;
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
