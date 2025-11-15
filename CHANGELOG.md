@@ -1,6 +1,23 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [4.10.0] - 2025-11-15
+
+### Bug Fixes
+
+- Reduce output of `release:clean`
+
+### Features
+
+- Add script to kick off the release locally
+- Added script to migrate my projects from the old Sonatype publishing to the new
+- Added script to update secrets in repo
+
+### Miscellaneous Tasks
+
+- Update gitignore
+- Upgraded dependencies
+
 ## [4.9.9] - 2025-09-24
 
 ### Features
