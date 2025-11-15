@@ -5,6 +5,7 @@
 # find . -type d -depth 1 -exec ./java/scripts/test-repo.sh {} \; -print
 
 POM_TOKENS=()
+NEGATE=0
 
 while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     --sonatype )
@@ -25,6 +26,9 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
     -c | --custom )
         shift; POM_TOKENS+=($1)
         ;;
+    -n )
+        NEGATE=1
+        ;;
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
@@ -38,7 +42,8 @@ fi
 
 for pom_token in "${POM_TOKENS[@]}"; do
     grep -q "$pom_token" "$1/pom.xml"
-    if [[ $? -ne 0 ]]; then
+    GREP_RESULT=$?
+    if [[ $NEGATE -eq 0 && $GREP_RESULT -ne 0 || $NEGATE -ne 0 && $GREP_RESULT -eq 0 ]]; then
         exit 3
     fi
 done
