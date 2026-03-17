@@ -1,5 +1,8 @@
 # java
 
+**This repo is being repurposed. It will not be used as a parent pom.**
+**It will be used as a release helper for Java projects.**
+
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.ngeor/java.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/com.github.ngeor/java)
  [![build](https://github.com/ngeor/java/actions/workflows/build.yml/badge.svg)](https://github.com/ngeor/java/actions/workflows/build.yml)
 
