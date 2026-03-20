@@ -35,8 +35,9 @@
     <assertj.version>3.27.7</assertj.version>
     <picocli.version>4.7.7</picocli.version>
     <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-    <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <maven-enforcer-plugin.version>3.6.2</maven-enforcer-plugin.version>
+    <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+    <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
     <spotless-maven-plugin.version>3.4.0</spotless-maven-plugin.version>
     <palantir-java-format.version>2.89.0</palantir-java-format.version>
   </properties>
@@ -137,6 +138,26 @@
             <sortPom/>
           </pom>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <phase>package</phase>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.github.ngeor.App</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
