@@ -1,6 +1,6 @@
 package com.github.ngeor;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +13,6 @@ class AppTest {
      */
     @Test
     void testApp() {
-        assertEquals(1, 1);
+        assertThat(1).isEqualTo(1);
     }
 }
