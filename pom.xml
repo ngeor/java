@@ -4,7 +4,7 @@
   <groupId>com.github.ngeor</groupId>
   <artifactId>java</artifactId>
   <version>5.0.0-SNAPSHOT</version>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   <name>java</name>
   <description>Parent pom for Java repository</description>
   <url>https://github.com/ngeor/java</url>
