@@ -1,30 +1,30 @@
 package com.github.ngeor;
 
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-public sealed interface Result<T, E> {
+public sealed interface Result<T, E extends RuntimeException> {
 
-    static <T, E> Result<T, E> ok(T value) {
+    static <T, E extends RuntimeException> Result<T, E> ok(T value) {
         return new Ok<>(value);
     }
 
-    static <T, E> Result<T, E> err(E err) {
+    static <T, E extends RuntimeException> Result<T, E> err(E err) {
         return new Err<>(err);
     }
 
     <U> Result<U, E> map(Function<T, U> f);
 
-    <F> Result<T, F> mapErr(Function<E, F> f);
+    <F extends RuntimeException> Result<T, F> mapErr(Function<E, F> f);
 
     <U> Result<U, E> flatMap(Function<T, Result<U, E>> f);
 
-    Optional<T> toOk();
+    T get();
 
-    Optional<E> toErr();
+    <U> Result<U, E> andThen(Supplier<Result<U, E>> supplier);
 
-    record Ok<T, E>(T value) implements Result<T, E> {
+    record Ok<T, E extends RuntimeException>(T value) implements Result<T, E> {
 
         public Ok {
             Objects.requireNonNull(value);
@@ -36,7 +36,7 @@ public sealed interface Result<T, E> {
         }
 
         @Override
-        public <F> Result<T, F> mapErr(Function<E, F> f) {
+        public <F extends RuntimeException> Result<T, F> mapErr(Function<E, F> f) {
             return ok(value);
         }
 
@@ -46,17 +46,17 @@ public sealed interface Result<T, E> {
         }
 
         @Override
-        public Optional<T> toOk() {
-            return Optional.of(value);
+        public T get() {
+            return value;
         }
 
         @Override
-        public Optional<E> toErr() {
-            return Optional.empty();
+        public <U> Result<U, E> andThen(Supplier<Result<U, E>> supplier) {
+            return supplier.get();
         }
     }
 
-    record Err<T, E>(E error) implements Result<T, E> {
+    record Err<T, E extends RuntimeException>(E error) implements Result<T, E> {
 
         public Err {
             Objects.requireNonNull(error);
@@ -68,7 +68,7 @@ public sealed interface Result<T, E> {
         }
 
         @Override
-        public <F> Result<T, F> mapErr(Function<E, F> f) {
+        public <F extends RuntimeException> Result<T, F> mapErr(Function<E, F> f) {
             return err(f.apply(error));
         }
 
@@ -78,13 +78,13 @@ public sealed interface Result<T, E> {
         }
 
         @Override
-        public Optional<T> toOk() {
-            return Optional.empty();
+        public T get() {
+            throw error;
         }
 
         @Override
-        public Optional<E> toErr() {
-            return Optional.of(error);
+        public <U> Result<U, E> andThen(Supplier<Result<U, E>> supplier) {
+            return err(error);
         }
     }
 }

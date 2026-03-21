@@ -141,16 +141,43 @@ class AppTest {
     }
 
     @Test
-    void testDirectoryExistsAndContainsPomXml() throws Exception {
+    void testNotOnDefaultBranch() throws Exception {
         // arrange
         ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
-        remoteGit.runCheck("init", "--bare");
+        remoteGit.runCheck("init", "--bare", "-b", "master");
         git.runCheck("clone", remoteDir.toAbsolutePath().toString(), ".");
         git.runCheck("config", "user.name", "Dummy User");
         git.runCheck("config", "user.email", "dummy@user.com");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
         git.runCheck("add", "pom.xml");
         git.runCheck("commit", "-m", "Initial commit");
+        // a push is needed to mark the default branch
+        git.runCheck("push");
+        git.runCheck("remote", "set-head", "origin", "master");
+        git.runCheck("checkout", "-b", "feature");
+
+        // act
+        act();
+
+        // assert
+        assertThat(exitCode).isZero();
+        assertThat(git.runCheck("rev-parse", "--abbrev-ref", "HEAD")).endsWith("master");
+    }
+
+    @Test
+    void testDirectoryExistsAndContainsPomXml() throws Exception {
+        // arrange
+        ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
+        remoteGit.runCheck("init", "--bare", "-b", "master");
+        git.runCheck("clone", remoteDir.toAbsolutePath().toString(), ".");
+        git.runCheck("config", "user.name", "Dummy User");
+        git.runCheck("config", "user.email", "dummy@user.com");
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        git.runCheck("add", "pom.xml");
+        git.runCheck("commit", "-m", "Initial commit");
+        // a push is needed to mark the default branch
+        git.runCheck("push");
+        git.runCheck("remote", "set-head", "origin", "master");
 
         // act
         act();

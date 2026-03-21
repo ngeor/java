@@ -2,7 +2,6 @@ package com.github.ngeor;
 
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -38,10 +37,24 @@ public final class App implements Callable<Integer> {
         directory = directory.toAbsolutePath().normalize();
         git = new ProcessHelper("git", directory.toFile());
 
-        Err err = validate().orElse(null);
-        if (err != null) {
-            System.err.println(err.message());
-            return err.code();
+        try {
+            validateDirectoryExists()
+                    .andThen(this::validatePomXmlExists)
+                    .andThen(this::validateGitDirectoryExists)
+                    .andThen(this::validatePendingGitChanges)
+                    .andThen(this::validateSingleRemote)
+                    .flatMap(this::getDefaultBranch)
+                    .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
+                        if (!defaultBranch.equals(currentBranch)) {
+                            return switchBranch(defaultBranch);
+                        }
+
+                        return Result.ok("");
+                    }))
+                    .get();
+        } catch (ProcessFailException ex) {
+            System.err.println(ex.getMessage());
+            return ex.getCode();
         }
 
         System.out.println("Hello World! dryRun was " + dryRun);
@@ -49,50 +62,66 @@ public final class App implements Callable<Integer> {
         return 0;
     }
 
-    private Optional<Err> validate() {
-        return validateDirectoryExists()
-                .or(this::validatePomXmlExists)
-                .or(this::validateGitDirectoryExists)
-                .or(this::validatePendingGitChanges)
-                .or(this::validateSingleRemote);
-    }
-
-    private Optional<Err> validateDirectoryExists() {
+    private Result<String, ProcessFailException> validateDirectoryExists() {
         if (directory.toFile().isDirectory()) {
-            return Optional.empty();
+            return Result.ok("");
         }
-        return Optional.of(new Err(1, "Directory " + directory + " does not exist"));
+        return Result.err(new ProcessFailException(1, "Directory " + directory + " does not exist"));
     }
 
-    private Optional<Err> validatePomXmlExists() {
+    private Result<String, ProcessFailException> validatePomXmlExists() {
         if (directory.resolve("pom.xml").toFile().isFile()) {
-            return Optional.empty();
+            return Result.ok("");
         }
-        return Optional.of(new Err(2, "Directory " + directory + " does not contain a pom.xml file"));
+        return Result.err(new ProcessFailException(2, "Directory " + directory + " does not contain a pom.xml file"));
     }
 
-    private Optional<Err> validateGitDirectoryExists() {
+    private Result<String, ProcessFailException> validateGitDirectoryExists() {
         if (directory.resolve(".git").toFile().isDirectory()) {
-            return Optional.empty();
+            return Result.ok("");
         }
-        return Optional.of(new Err(3, "Directory " + directory + " does not contain a .git directory"));
+        return Result.err(new ProcessFailException(3, "Directory " + directory + " does not contain a .git directory"));
     }
 
-    private Optional<Err> validatePendingGitChanges() {
+    private Result<String, ProcessFailException> validatePendingGitChanges() {
         return git.run("status", "--porcelain")
-                .mapErr(e -> new Err(4, "Could not check git status: " + e.getMessage()))
+                .mapErr(e -> new ProcessFailException(4, "Could not check git status: " + e.getMessage()))
                 .flatMap(output -> output.isEmpty()
                         ? Result.ok(output)
-                        : Result.err(new Err(4, "Directory " + directory + " contains pending git changes")))
-                .toErr();
+                        : Result.err(new ProcessFailException(
+                                4, "Directory " + directory + " contains pending git changes")));
     }
 
-    private Optional<Err> validateSingleRemote() {
+    private Result<String, ProcessFailException> validateSingleRemote() {
         return git.run("remote")
-                .mapErr(e -> new Err(5, "Could not check git remotes: " + e.getMessage()))
+                .mapErr(e -> new ProcessFailException(5, "Could not check git remotes: " + e.getMessage()))
                 .flatMap(output -> output.lines().count() == 1
                         ? Result.ok(output)
-                        : Result.err(new Err(5, "Directory " + directory + " does not have exactly one git remote")))
-                .toErr();
+                        : Result.err(new ProcessFailException(
+                                5, "Directory " + directory + " does not have exactly one git remote")));
+    }
+
+    private Result<String, ProcessFailException> getDefaultBranch(String remote) {
+        String prefix = "refs/remotes/" + remote + "/";
+        return git.run("symbolic-ref", prefix + "HEAD")
+                .mapErr(e -> new ProcessFailException(6, "Could not get default branch: " + e.getMessage()))
+                .flatMap(fullName -> {
+                    if (fullName.startsWith(prefix)) {
+                        return Result.ok(fullName.substring(prefix.length()));
+                    } else {
+                        return Result.err(new ProcessFailException(6, "Invalid default branch: " + fullName));
+                    }
+                });
+    }
+
+    private Result<String, ProcessFailException> getCurrentBranch() {
+        return git.run("rev-parse", "--abbrev-ref", "HEAD")
+                .mapErr(e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage()));
+    }
+
+    private Result<String, ProcessFailException> switchBranch(String branch) {
+        return git.run("checkout", branch)
+                .mapErr(e ->
+                        new ProcessFailException(8, "Could not switch to branch " + branch + ": " + e.getMessage()));
     }
 }

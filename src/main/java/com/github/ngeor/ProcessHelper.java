@@ -18,12 +18,11 @@ public class ProcessHelper {
         this.directory = Objects.requireNonNull(directory);
     }
 
-    public String runCheck(String... args) throws Exception {
-        Result<String, Exception> result = run(args);
-        return result.toOk().orElseThrow(() -> result.toErr().orElseThrow());
+    public String runCheck(String... args) {
+        return run(args).get();
     }
 
-    public Result<String, Exception> run(String... args) {
+    public Result<String, RuntimeException> run(String... args) {
         List<String> command = new ArrayList<>(1 + args.length);
         command.add(this.command);
         command.addAll(List.of(args));
@@ -41,7 +40,7 @@ public class ProcessHelper {
             exitCode = process.waitFor();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            return Result.err(ex);
+            return Result.err(new RuntimeException(ex));
         }
 
         if (exitCode != 0) {
@@ -69,7 +68,7 @@ public class ProcessHelper {
         try (reader) {
             StringWriter stringWriter = new StringWriter();
             reader.transferTo(stringWriter);
-            return stringWriter.toString();
+            return stringWriter.toString().strip();
         }
     }
 }
