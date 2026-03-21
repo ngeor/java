@@ -22,6 +22,9 @@ class AppTest {
     @TempDir
     private Path tempDir;
 
+    @TempDir
+    private Path remoteDir;
+
     @SystemStub
     private SystemOut systemOut;
 
@@ -119,9 +122,30 @@ class AppTest {
     }
 
     @Test
-    void testDirectoryExistsAndContainsPomXml() throws IOException {
+    void testNoGitRemote() throws IOException {
         // arrange
         git.run("init");
+        git.run("config", "user.name", "Dummy User");
+        git.run("config", "user.email", "dummy@user.com");
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        git.run("add", "pom.xml");
+        git.run("commit", "-m", "Initial commit");
+
+        // act
+        act();
+
+        // assert
+        assertThat(exitCode).isNotZero();
+        assertThat(systemErr.getText())
+                .contains("Directory " + tempDir.toAbsolutePath() + " does not have exactly one git remote");
+    }
+
+    @Test
+    void testDirectoryExistsAndContainsPomXml() throws IOException {
+        // arrange
+        ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
+        remoteGit.run("init", "--bare");
+        git.run("clone", remoteDir.toAbsolutePath().toString(), ".");
         git.run("config", "user.name", "Dummy User");
         git.run("config", "user.email", "dummy@user.com");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");

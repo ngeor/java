@@ -63,6 +63,17 @@ public final class App implements Callable<Integer> {
             return 5;
         }
 
+        // ensure directory has exactly one remote
+        try {
+            if (!hasSingleRemote()) {
+                System.err.println("Directory " + directory + " does not have exactly one git remote");
+                return 6;
+            }
+        } catch (ProcessFailException ex) {
+            System.err.println("Could not check git remotes: " + ex.getMessage());
+            return 7;
+        }
+
         System.out.println("Hello World! dryRun was " + dryRun);
         System.out.println("Directory is " + directory);
         return 0;
@@ -72,5 +83,10 @@ public final class App implements Callable<Integer> {
         return !new ProcessHelper("git", directory.toFile())
                 .run("status", "--porcelain")
                 .isEmpty();
+    }
+
+    private boolean hasSingleRemote() {
+        String output = new ProcessHelper("git", directory.toFile()).run("remote");
+        return output.lines().count() == 1;
     }
 }
