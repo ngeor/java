@@ -40,6 +40,12 @@ public final class App implements Callable<Integer> {
             return 1;
         }
 
+        // ensure directory contains pom.xml
+        if (!directory.resolve("pom.xml").toFile().isFile()) {
+            System.err.println("Directory " + directory + " does not contain a pom.xml file");
+            return 2;
+        }
+
         System.out.println("Hello World! dryRun was " + dryRun);
         System.out.println("Directory is " + directory);
         return 0;
