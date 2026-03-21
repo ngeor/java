@@ -1,26 +1,46 @@
 package com.github.ngeor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
+import uk.org.webcompere.systemstubs.stream.SystemErr;
+import uk.org.webcompere.systemstubs.stream.SystemOut;
 
 /**
  * Integration tests for {@link App}.
  */
+@ExtendWith(SystemStubsExtension.class)
 class AppTest {
     @TempDir
     private Path tempDir;
 
+    @SystemStub
+    private SystemOut systemOut;
+
+    @SystemStub
+    private SystemErr systemErr;
+
     @Test
-    void testApp() {
-        assertThat(tempDir).isNotNull();
-        assertThatNoException().isThrownBy(() -> App.executeWithoutExiting(new String[] {
-            "--directory",
-            tempDir.toString()
-        }));
+    void testDirectoryDoesNotExist() {
+        int exitCode = App.executeWithoutExiting(
+                new String[] {"--directory", tempDir.resolve("oops").toString()});
+        assertThat(exitCode).isNotZero();
+        assertThat(systemErr.getText())
+                .contains("Directory " + tempDir.resolve("oops").toAbsolutePath() + " does not exist");
+    }
+
+    @Test
+    void testDirectoryExists() {
+        int exitCode = App.executeWithoutExiting(new String[] {"--directory", tempDir.toString()});
+        assertThat(exitCode).isZero();
+        assertThat(systemOut.getText())
+                .contains("Hello World! dryRun was false")
+                .contains("Directory is " + tempDir.toAbsolutePath());
+        assertThat(systemErr.getText()).isEmpty();
     }
 }
