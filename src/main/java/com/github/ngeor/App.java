@@ -43,14 +43,7 @@ public final class App implements Callable<Integer> {
                     .andThen(this::validateGitDirectoryExists)
                     .andThen(this::validatePendingGitChanges)
                     .andThen(this::validateSingleRemote)
-                    .flatMap(this::getDefaultBranch)
-                    .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
-                        if (!defaultBranch.equals(currentBranch)) {
-                            return switchBranch(defaultBranch);
-                        }
-
-                        return Result.ok("");
-                    }))
+                    .flatMap(this::ensureOnDefaultBranch)
                     .get();
         } catch (ProcessFailException ex) {
             System.err.println(ex.getMessage());
@@ -99,6 +92,17 @@ public final class App implements Callable<Integer> {
                         ? Result.ok(output)
                         : Result.err(new ProcessFailException(
                                 5, "Directory " + directory + " does not have exactly one git remote")));
+    }
+
+    private Result<String, ProcessFailException> ensureOnDefaultBranch(String remote) {
+        return getDefaultBranch(remote)
+                .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
+                    if (!defaultBranch.equals(currentBranch)) {
+                        return switchBranch(defaultBranch);
+                    }
+
+                    return Result.ok("");
+                }));
     }
 
     private Result<String, ProcessFailException> getDefaultBranch(String remote) {
