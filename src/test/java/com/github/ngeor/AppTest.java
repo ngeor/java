@@ -112,7 +112,7 @@ class AppTest {
         // arrange
         git.init().get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.runCheck("add", "pom.xml");
+        git.add("pom.xml").get();
 
         // act
         act();
@@ -126,12 +126,13 @@ class AppTest {
     @Test
     void testNoGitRemote() throws Exception {
         // arrange
-        git.init().get();
-        git.runCheck("config", "user.name", "Dummy User");
-        git.runCheck("config", "user.email", "dummy@user.com");
+        git.init()
+                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.runCheck("add", "pom.xml");
-        git.runCheck("commit", "-m", "Initial commit");
+        git.add("pom.xml")
+                .andThen(() -> git.commit("Initial commit"))
+                .get();
 
         // act
         act();

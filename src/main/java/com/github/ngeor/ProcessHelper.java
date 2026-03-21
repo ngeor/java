@@ -18,10 +18,6 @@ public class ProcessHelper {
         this.directory = Objects.requireNonNull(directory);
     }
 
-    public String runCheck(String... args) {
-        return run(args).get();
-    }
-
     public Result<String, RuntimeException> run(String... args) {
         List<String> command = new ArrayList<>(1 + args.length);
         command.add(this.command);
