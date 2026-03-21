@@ -18,7 +18,7 @@ public final class App implements Callable<Integer> {
     @Option(names = "--directory", description = "The working directory", defaultValue = ".")
     private Path directory;
 
-    private ProcessHelper git;
+    private Git git;
 
     private App() {}
 
@@ -35,7 +35,7 @@ public final class App implements Callable<Integer> {
         // sanity check against Picocli framework and normalize directory
         Objects.requireNonNull(directory, "Directory cannot be null");
         directory = directory.toAbsolutePath().normalize();
-        git = new ProcessHelper("git", directory.toFile());
+        git = new Git(directory.toFile());
 
         try {
             validateDirectoryExists()
@@ -115,7 +115,7 @@ public final class App implements Callable<Integer> {
     }
 
     private Result<String, ProcessFailException> getCurrentBranch() {
-        return git.run("rev-parse", "--abbrev-ref", "HEAD")
+        return git.getCurrentBranch()
                 .mapErr(e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage()));
     }
 

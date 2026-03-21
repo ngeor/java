@@ -33,11 +33,13 @@ class AppTest {
 
     private int exitCode;
 
-    private ProcessHelper git;
+    private Git git;
 
     @BeforeEach
     void beforeEach() {
-        git = new ProcessHelper("git", tempDir.toFile());
+        git = new Git(tempDir.toFile());
+        Git remoteGit = new Git(remoteDir.toFile());
+        remoteGit.runCheck("init", "--bare", "-b", "master");
     }
 
     @Test
@@ -143,17 +145,17 @@ class AppTest {
     @Test
     void testNotOnDefaultBranch() throws Exception {
         // arrange
-        ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
-        remoteGit.runCheck("init", "--bare", "-b", "master");
-        git.runCheck("clone", remoteDir.toAbsolutePath().toString(), ".");
-        git.runCheck("config", "user.name", "Dummy User");
-        git.runCheck("config", "user.email", "dummy@user.com");
+        git.run("clone", remoteDir.toAbsolutePath().toString(), ".")
+                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.runCheck("add", "pom.xml");
-        git.runCheck("commit", "-m", "Initial commit");
-        // a push is needed to mark the default branch
-        git.runCheck("push");
-        git.runCheck("remote", "set-head", "origin", "master");
+        git.add("pom.xml")
+                .andThen(() -> git.commit("Initial commit"))
+                // a push is needed to mark the default branch
+                .andThen(git::push)
+                .andThen(() -> git.setRemoteHead("origin", "master"))
+                .get();
+        // switch to a different branch
         git.runCheck("checkout", "-b", "feature");
 
         // act
@@ -161,23 +163,22 @@ class AppTest {
 
         // assert
         assertThat(exitCode).isZero();
-        assertThat(git.runCheck("rev-parse", "--abbrev-ref", "HEAD")).endsWith("master");
+        assertThat(git.getCurrentBranch().get()).isEqualTo("master");
     }
 
     @Test
     void testDirectoryExistsAndContainsPomXml() throws Exception {
         // arrange
-        ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
-        remoteGit.runCheck("init", "--bare", "-b", "master");
-        git.runCheck("clone", remoteDir.toAbsolutePath().toString(), ".");
-        git.runCheck("config", "user.name", "Dummy User");
-        git.runCheck("config", "user.email", "dummy@user.com");
+        git.run("clone", remoteDir.toAbsolutePath().toString(), ".")
+                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.runCheck("add", "pom.xml");
-        git.runCheck("commit", "-m", "Initial commit");
-        // a push is needed to mark the default branch
-        git.runCheck("push");
-        git.runCheck("remote", "set-head", "origin", "master");
+        git.add("pom.xml")
+                .andThen(() -> git.commit("Initial commit"))
+                // a push is needed to mark the default branch
+                .andThen(git::push)
+                .andThen(() -> git.setRemoteHead("origin", "master"))
+                .get();
 
         // act
         act();
