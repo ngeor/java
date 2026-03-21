@@ -2,6 +2,7 @@ package com.github.ngeor;
 
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -18,6 +19,8 @@ public final class App implements Callable<Integer> {
     @Option(names = "--directory", description = "The working directory", defaultValue = ".")
     private Path directory;
 
+    private ProcessHelper git;
+
     private App() {}
 
     public static void main(String[] args) {
@@ -33,45 +36,12 @@ public final class App implements Callable<Integer> {
         // sanity check against Picocli framework and normalize directory
         Objects.requireNonNull(directory, "Directory cannot be null");
         directory = directory.toAbsolutePath().normalize();
+        git = new ProcessHelper("git", directory.toFile());
 
-        // ensure directory exists
-        if (!directory.toFile().isDirectory()) {
-            System.err.println("Directory " + directory + " does not exist");
-            return 1;
-        }
-
-        // ensure directory contains pom.xml
-        if (!directory.resolve("pom.xml").toFile().isFile()) {
-            System.err.println("Directory " + directory + " does not contain a pom.xml file");
-            return 2;
-        }
-
-        // ensure directory contains .git
-        if (!directory.resolve(".git").toFile().isDirectory()) {
-            System.err.println("Directory " + directory + " does not contain a .git directory");
-            return 3;
-        }
-
-        // ensure directory does not contain pending or untracked git changes
-        try {
-            if (hasPendingGitChanges()) {
-                System.err.println("Directory " + directory + " contains pending git changes");
-                return 4;
-            }
-        } catch (ProcessFailException ex) {
-            System.err.println("Could not check git status: " + ex.getMessage());
-            return 5;
-        }
-
-        // ensure directory has exactly one remote
-        try {
-            if (!hasSingleRemote()) {
-                System.err.println("Directory " + directory + " does not have exactly one git remote");
-                return 6;
-            }
-        } catch (ProcessFailException ex) {
-            System.err.println("Could not check git remotes: " + ex.getMessage());
-            return 7;
+        Err err = validate().orElse(null);
+        if (err != null) {
+            System.err.println(err.message());
+            return err.code();
         }
 
         System.out.println("Hello World! dryRun was " + dryRun);
@@ -79,14 +49,63 @@ public final class App implements Callable<Integer> {
         return 0;
     }
 
+    private Optional<Err> validate() {
+        return validateDirectoryExists()
+                .or(this::validatePomXmlExists)
+                .or(this::validateGitDirectoryExists)
+                .or(this::validatePendingGitChanges)
+                .or(this::validateSingleRemote);
+    }
+
+    private Optional<Err> validateDirectoryExists() {
+        if (directory.toFile().isDirectory()) {
+            return Optional.empty();
+        }
+        return Optional.of(new Err(1, "Directory " + directory + " does not exist"));
+    }
+
+    private Optional<Err> validatePomXmlExists() {
+        if (directory.resolve("pom.xml").toFile().isFile()) {
+            return Optional.empty();
+        }
+        return Optional.of(new Err(2, "Directory " + directory + " does not contain a pom.xml file"));
+    }
+
+    private Optional<Err> validateGitDirectoryExists() {
+        if (directory.resolve(".git").toFile().isDirectory()) {
+            return Optional.empty();
+        }
+        return Optional.of(new Err(3, "Directory " + directory + " does not contain a .git directory"));
+    }
+
+    private Optional<Err> validatePendingGitChanges() {
+        try {
+            if (hasPendingGitChanges()) {
+                return Optional.of(new Err(4, "Directory " + directory + " contains pending git changes"));
+            }
+            return Optional.empty();
+        } catch (ProcessFailException ex) {
+            return Optional.of(new Err(5, "Could not check git status: " + ex.getMessage()));
+        }
+    }
+
+    private Optional<Err> validateSingleRemote() {
+        try {
+            if (hasSingleRemote()) {
+                return Optional.empty();
+            }
+            return Optional.of(new Err(6, "Directory " + directory + " does not have exactly one git remote"));
+        } catch (ProcessFailException ex) {
+            return Optional.of(new Err(7, "Could not check git remotes: " + ex.getMessage()));
+        }
+    }
+
     private boolean hasPendingGitChanges() {
-        return !new ProcessHelper("git", directory.toFile())
-                .run("status", "--porcelain")
-                .isEmpty();
+        return !git.run("status", "--porcelain").isEmpty();
     }
 
     private boolean hasSingleRemote() {
-        String output = new ProcessHelper("git", directory.toFile()).run("remote");
+        String output = git.run("remote");
         return output.lines().count() == 1;
     }
 }
