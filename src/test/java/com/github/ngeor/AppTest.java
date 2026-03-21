@@ -39,7 +39,7 @@ class AppTest {
     void beforeEach() {
         git = new Git(tempDir.toFile());
         Git remoteGit = new Git(remoteDir.toFile());
-        remoteGit.runCheck("init", "--bare", "-b", "master");
+        remoteGit.initBare("master").get();
     }
 
     @Test
@@ -95,7 +95,7 @@ class AppTest {
     @Test
     void testGitHasUntrackedFiles() throws Exception {
         // arrange
-        git.runCheck("init");
+        git.init().get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
 
         // act
@@ -110,7 +110,7 @@ class AppTest {
     @Test
     void testGitHasStagedNonCommittedFiles() throws Exception {
         // arrange
-        git.runCheck("init");
+        git.init().get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
         git.runCheck("add", "pom.xml");
 
@@ -126,7 +126,7 @@ class AppTest {
     @Test
     void testNoGitRemote() throws Exception {
         // arrange
-        git.runCheck("init");
+        git.init().get();
         git.runCheck("config", "user.name", "Dummy User");
         git.runCheck("config", "user.email", "dummy@user.com");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");

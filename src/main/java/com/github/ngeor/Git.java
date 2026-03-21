@@ -11,6 +11,14 @@ public class Git extends ProcessHelper {
         return run("clone", url, ".");
     }
 
+    public Result<String, RuntimeException> init() {
+        return run("init");
+    }
+
+    public Result<String, RuntimeException> initBare(String defaultBranch) {
+        return run("init", "--bare", "-b", defaultBranch);
+    }
+
     public Result<String, RuntimeException> configure(String username, String email) {
         return run("config", "user.name", username).andThen(() -> run("config", "user.email", email));
     }
