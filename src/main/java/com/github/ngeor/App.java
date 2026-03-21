@@ -46,6 +46,12 @@ public final class App implements Callable<Integer> {
             return 2;
         }
 
+        // ensure directory contains .git
+        if (!directory.resolve(".git").toFile().isDirectory()) {
+            System.err.println("Directory " + directory + " does not contain a .git directory");
+            return 3;
+        }
+
         System.out.println("Hello World! dryRun was " + dryRun);
         System.out.println("Directory is " + directory);
         return 0;

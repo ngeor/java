@@ -48,13 +48,28 @@ class AppTest {
         // assert
         assertThat(exitCode).isNotZero();
         assertThat(systemErr.getText())
-            .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a pom.xml file");
+                .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a pom.xml file");
+    }
+
+    @Test
+    void testDirectoryDoesNotContainDotGit() throws IOException {
+        // arrange
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+
+        // act
+        act();
+
+        // assert
+        assertThat(exitCode).isEqualTo(3);
+        assertThat(systemErr.getText())
+                .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a .git directory");
     }
 
     @Test
     void testDirectoryExistsAndContainsPomXml() throws IOException {
         // arrange
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        Files.createDirectory(tempDir.resolve(".git"));
 
         // act
         act();
