@@ -52,8 +52,25 @@ public final class App implements Callable<Integer> {
             return 3;
         }
 
+        // ensure directory does not contain pending or untracked git changes
+        try {
+            if (hasPendingGitChanges()) {
+                System.err.println("Directory " + directory + " contains pending git changes");
+                return 4;
+            }
+        } catch (ProcessFailException ex) {
+            System.err.println("Could not check git status: " + ex.getMessage());
+            return 5;
+        }
+
         System.out.println("Hello World! dryRun was " + dryRun);
         System.out.println("Directory is " + directory);
         return 0;
+    }
+
+    private boolean hasPendingGitChanges() {
+        return !new ProcessHelper("git", directory.toFile())
+                .run("status", "--porcelain")
+                .isEmpty();
     }
 }
