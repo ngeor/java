@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,7 +18,12 @@ public class ProcessHelper {
         this.directory = Objects.requireNonNull(directory);
     }
 
-    public String run(String... args) {
+    public String runCheck(String... args) throws Exception {
+        Result<String, Exception> result = run(args);
+        return result.toOk().orElseThrow(() -> result.toErr().orElseThrow());
+    }
+
+    public Result<String, Exception> run(String... args) {
         List<String> command = new ArrayList<>(1 + args.length);
         command.add(this.command);
         command.addAll(List.of(args));
@@ -27,7 +33,7 @@ public class ProcessHelper {
         try {
             process = processBuilder.start();
         } catch (IOException ex) {
-            throw new ProcessFailException("Could not start process", ex);
+            return Result.err(new UncheckedIOException("Could not start process", ex));
         }
 
         int exitCode;
@@ -35,7 +41,7 @@ public class ProcessHelper {
             exitCode = process.waitFor();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new ProcessFailException("Interrupted while waiting for process", ex);
+            return Result.err(ex);
         }
 
         if (exitCode != 0) {
@@ -43,18 +49,20 @@ public class ProcessHelper {
             try {
                 stdErr = readerToString(process.errorReader());
             } catch (IOException ex) {
-                throw new ProcessFailException("Could not read process error stream", ex);
+                return Result.err(new UncheckedIOException("Could not read process error stream", ex));
             }
-            throw new ProcessFailException(exitCode, stdErr);
+
+            return Result.err(new ProcessFailException(exitCode, stdErr));
         }
 
         String output;
         try {
             output = readerToString(process.inputReader());
         } catch (IOException ex) {
-            throw new ProcessFailException("Could not read process output stream", ex);
+            return Result.err(new UncheckedIOException("Could not read process output stream", ex));
         }
-        return output;
+
+        return Result.ok(output);
     }
 
     private static String readerToString(BufferedReader reader) throws IOException {

@@ -91,9 +91,9 @@ class AppTest {
     }
 
     @Test
-    void testGitHasUntrackedFiles() throws IOException {
+    void testGitHasUntrackedFiles() throws Exception {
         // arrange
-        git.run("init");
+        git.runCheck("init");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
 
         // act
@@ -106,11 +106,11 @@ class AppTest {
     }
 
     @Test
-    void testGitHasStagedNonCommittedFiles() throws IOException {
+    void testGitHasStagedNonCommittedFiles() throws Exception {
         // arrange
-        git.run("init");
+        git.runCheck("init");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.run("add", "pom.xml");
+        git.runCheck("add", "pom.xml");
 
         // act
         act();
@@ -122,14 +122,14 @@ class AppTest {
     }
 
     @Test
-    void testNoGitRemote() throws IOException {
+    void testNoGitRemote() throws Exception {
         // arrange
-        git.run("init");
-        git.run("config", "user.name", "Dummy User");
-        git.run("config", "user.email", "dummy@user.com");
+        git.runCheck("init");
+        git.runCheck("config", "user.name", "Dummy User");
+        git.runCheck("config", "user.email", "dummy@user.com");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.run("add", "pom.xml");
-        git.run("commit", "-m", "Initial commit");
+        git.runCheck("add", "pom.xml");
+        git.runCheck("commit", "-m", "Initial commit");
 
         // act
         act();
@@ -141,16 +141,16 @@ class AppTest {
     }
 
     @Test
-    void testDirectoryExistsAndContainsPomXml() throws IOException {
+    void testDirectoryExistsAndContainsPomXml() throws Exception {
         // arrange
         ProcessHelper remoteGit = new ProcessHelper("git", remoteDir.toFile());
-        remoteGit.run("init", "--bare");
-        git.run("clone", remoteDir.toAbsolutePath().toString(), ".");
-        git.run("config", "user.name", "Dummy User");
-        git.run("config", "user.email", "dummy@user.com");
+        remoteGit.runCheck("init", "--bare");
+        git.runCheck("clone", remoteDir.toAbsolutePath().toString(), ".");
+        git.runCheck("config", "user.name", "Dummy User");
+        git.runCheck("config", "user.email", "dummy@user.com");
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.run("add", "pom.xml");
-        git.run("commit", "-m", "Initial commit");
+        git.runCheck("add", "pom.xml");
+        git.runCheck("commit", "-m", "Initial commit");
 
         // act
         act();

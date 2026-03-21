@@ -79,33 +79,20 @@ public final class App implements Callable<Integer> {
     }
 
     private Optional<Err> validatePendingGitChanges() {
-        try {
-            if (hasPendingGitChanges()) {
-                return Optional.of(new Err(4, "Directory " + directory + " contains pending git changes"));
-            }
-            return Optional.empty();
-        } catch (ProcessFailException ex) {
-            return Optional.of(new Err(5, "Could not check git status: " + ex.getMessage()));
-        }
+        return git.run("status", "--porcelain")
+                .mapErr(e -> new Err(4, "Could not check git status: " + e.getMessage()))
+                .flatMap(output -> output.isEmpty()
+                        ? Result.ok(output)
+                        : Result.err(new Err(4, "Directory " + directory + " contains pending git changes")))
+                .toErr();
     }
 
     private Optional<Err> validateSingleRemote() {
-        try {
-            if (hasSingleRemote()) {
-                return Optional.empty();
-            }
-            return Optional.of(new Err(6, "Directory " + directory + " does not have exactly one git remote"));
-        } catch (ProcessFailException ex) {
-            return Optional.of(new Err(7, "Could not check git remotes: " + ex.getMessage()));
-        }
-    }
-
-    private boolean hasPendingGitChanges() {
-        return !git.run("status", "--porcelain").isEmpty();
-    }
-
-    private boolean hasSingleRemote() {
-        String output = git.run("remote");
-        return output.lines().count() == 1;
+        return git.run("remote")
+                .mapErr(e -> new Err(5, "Could not check git remotes: " + e.getMessage()))
+                .flatMap(output -> output.lines().count() == 1
+                        ? Result.ok(output)
+                        : Result.err(new Err(5, "Directory " + directory + " does not have exactly one git remote")))
+                .toErr();
     }
 }
