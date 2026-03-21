@@ -1,18 +1,26 @@
 package com.github.ngeor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
 
 /**
- * Unit test for simple App.
+ * Integration tests for {@link App}.
  */
 class AppTest {
-    /**
-     * Rigorous Test.
-     */
+    @TempDir
+    private Path tempDir;
+
     @Test
     void testApp() {
-        assertThat(1).isEqualTo(1);
+        assertThat(tempDir).isNotNull();
+        assertThatNoException().isThrownBy(() -> App.executeWithoutExiting(new String[] {
+            "--directory",
+            tempDir.toString()
+        }));
     }
 }
