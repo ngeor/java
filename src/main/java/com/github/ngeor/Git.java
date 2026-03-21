@@ -7,6 +7,10 @@ public class Git extends ProcessHelper {
         super("git", directory);
     }
 
+    public Result<String, RuntimeException> clone(String url) {
+        return run("clone", url, ".");
+    }
+
     public Result<String, RuntimeException> configure(String username, String email) {
         return run("config", "user.name", username).andThen(() -> run("config", "user.email", email));
     }

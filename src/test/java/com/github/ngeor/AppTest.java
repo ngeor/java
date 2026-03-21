@@ -145,7 +145,7 @@ class AppTest {
     @Test
     void testNotOnDefaultBranch() throws Exception {
         // arrange
-        git.run("clone", remoteDir.toAbsolutePath().toString(), ".")
+        git.clone(remoteDir.toAbsolutePath().toString())
                 .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
                 .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
@@ -169,7 +169,7 @@ class AppTest {
     @Test
     void testDirectoryExistsAndContainsPomXml() throws Exception {
         // arrange
-        git.run("clone", remoteDir.toAbsolutePath().toString(), ".")
+        git.clone(remoteDir.toAbsolutePath().toString())
                 .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
                 .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
