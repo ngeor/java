@@ -34,4 +34,8 @@ public class Git extends ProcessHelper {
     public Result<String, RuntimeException> getCurrentBranch() {
         return run("rev-parse", "--abbrev-ref", "HEAD");
     }
+
+    public Result<String, RuntimeException> createAndSwitchToBranch(String branch) {
+        return run("checkout", "-b", branch);
+    }
 }

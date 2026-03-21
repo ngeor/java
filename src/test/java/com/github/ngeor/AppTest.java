@@ -156,7 +156,7 @@ class AppTest {
                 .andThen(() -> git.setRemoteHead("origin", "master"))
                 .get();
         // switch to a different branch
-        git.runCheck("checkout", "-b", "feature");
+        git.createAndSwitchToBranch("feature").get();
 
         // act
         act();
