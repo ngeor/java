@@ -78,15 +78,15 @@ public final class App implements Callable<Integer> {
         throw new AppException(3, "Directory " + directory + " does not contain a .git directory");
     }
 
-    private Try<String> validatePendingGitChanges() {
-        return wrapFailure(Try.of(() -> git.run("status", "--porcelain")), 4, "Could not check git status")
+    private Try<Void> validatePendingGitChanges() {
+        return wrapFailure(Try.of(git::statusPorcelain), 4, "Could not check git status")
                 .flatMap(output -> output.isEmpty()
-                        ? Try.success(output)
+                        ? Try.success(null)
                         : Try.failure(new AppException(4, "Directory " + directory + " contains pending git changes")));
     }
 
     private Try<String> validateSingleRemote() {
-        return wrapFailure(Try.of(() -> git.run("remote")), 5, "Could not check git remotes")
+        return wrapFailure(Try.of(git::remote), 5, "Could not check git remotes")
                 .flatMap(output -> output.lines().count() == 1
                         ? Try.success(output)
                         : Try.failure(new AppException(
