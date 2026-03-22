@@ -1,12 +1,14 @@
 package com.github.ngeor;
 
-import io.vavr.control.Try;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 public class ProcessHelper {
     private final String command;
@@ -17,37 +19,59 @@ public class ProcessHelper {
         this.directory = Objects.requireNonNull(directory);
     }
 
-    public Try<String> run(String... args) {
+    public String run(String... args) throws InterruptedException {
+        return runInternal(
+                process -> {
+                    String stdOut;
+                    try {
+                        stdOut = readerToString(process.inputReader());
+                    } catch (IOException ex) {
+                        throw new UncheckedIOException("Could not read output stream", ex);
+                    }
+
+                    return stdOut;
+                },
+                args);
+    }
+
+    public void runNoOutput(String... args) throws InterruptedException {
+        runInternal(ignored -> null, args);
+    }
+
+    private <T> T runInternal(Function<Process, T> onSuccess, String... args) throws InterruptedException {
         List<String> command = new ArrayList<>(1 + args.length);
         command.add(this.command);
         command.addAll(List.of(args));
 
         ProcessBuilder processBuilder = new ProcessBuilder().command(command).directory(directory);
-        return Try.of(processBuilder::start).flatMap(this::waitForProcess).flatMap(process -> {
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                return readerToString(process.errorReader())
-                        .flatMap(stdErr -> Try.failure(new ProcessFailException(exitCode, stdErr)));
-            }
+        Process process;
+        try {
+            process = processBuilder.start();
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Could not start process", ex);
+        }
 
-            return readerToString(process.inputReader());
-        });
+        int exitCode = process.waitFor();
+
+        if (exitCode == 0) {
+            return onSuccess.apply(process);
+        }
+
+        String stdErr;
+        try {
+            stdErr = readerToString(process.errorReader());
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Could not read error stream", ex);
+        }
+
+        throw new ProcessFailException(exitCode, stdErr);
     }
 
-    private Try<Process> waitForProcess(Process process) {
-        return Try.of(() -> {
-            process.waitFor();
-            return process;
-        });
-    }
-
-    private static Try<String> readerToString(BufferedReader reader) {
-        return Try.of(() -> {
-            try (reader) {
-                StringWriter stringWriter = new StringWriter();
-                reader.transferTo(stringWriter);
-                return stringWriter.toString().strip();
-            }
-        });
+    private static String readerToString(BufferedReader reader) throws IOException {
+        try (reader) {
+            StringWriter stringWriter = new StringWriter();
+            reader.transferTo(stringWriter);
+            return stringWriter.toString().strip();
+        }
     }
 }

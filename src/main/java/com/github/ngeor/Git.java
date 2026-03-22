@@ -1,6 +1,5 @@
 package com.github.ngeor;
 
-import io.vavr.control.Try;
 import java.io.File;
 
 public class Git extends ProcessHelper {
@@ -8,43 +7,44 @@ public class Git extends ProcessHelper {
         super("git", directory);
     }
 
-    public Try<String> clone(String url) {
-        return run("clone", url, ".");
+    public void clone(String url) throws InterruptedException {
+        runNoOutput("clone", url, ".");
     }
 
-    public Try<String> init() {
-        return run("init");
+    public void init() throws InterruptedException {
+        runNoOutput("init");
     }
 
-    public Try<String> initBare(String defaultBranch) {
-        return run("init", "--bare", "-b", defaultBranch);
+    public void initBare(String defaultBranch) throws InterruptedException {
+        runNoOutput("init", "--bare", "-b", defaultBranch);
     }
 
-    public Try<String> configure(String username, String email) {
-        return run("config", "user.name", username).flatMap(ignored -> run("config", "user.email", email));
+    public void configure(String username, String email) throws InterruptedException {
+        runNoOutput("config", "user.name", username);
+        runNoOutput("config", "user.email", email);
     }
 
-    public Try<String> setRemoteHead(String remote, String branch) {
-        return run("remote", "set-head", remote, branch);
+    public void setRemoteHead(String remote, String branch) throws InterruptedException {
+        runNoOutput("remote", "set-head", remote, branch);
     }
 
-    public Try<String> push() {
-        return run("push");
+    public void push() throws InterruptedException {
+        runNoOutput("push");
     }
 
-    public Try<String> commit(String message) {
-        return run("commit", "-m", message);
+    public void commit(String message) throws InterruptedException {
+        runNoOutput("commit", "-m", message);
     }
 
-    public Try<String> add(String filePattern) {
-        return run("add", filePattern);
+    public void add(String filePattern) throws InterruptedException {
+        runNoOutput("add", filePattern);
     }
 
-    public Try<String> getCurrentBranch() {
+    public String getCurrentBranch() throws InterruptedException {
         return run("rev-parse", "--abbrev-ref", "HEAD");
     }
 
-    public Try<String> createAndSwitchToBranch(String branch) {
-        return run("checkout", "-b", branch);
+    public void createAndSwitchToBranch(String branch) throws InterruptedException {
+        runNoOutput("checkout", "-b", branch);
     }
 }

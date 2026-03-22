@@ -81,7 +81,7 @@ public final class App implements Callable<Integer> {
     }
 
     private Try<String> validatePendingGitChanges() {
-        return git.run("status", "--porcelain")
+        return Try.of(() -> git.run("status", "--porcelain"))
                 .mapFailure(
                         Case($(), e -> new ProcessFailException(4, "Could not check git status: " + e.getMessage())))
                 .flatMap(output -> output.isEmpty()
@@ -91,7 +91,7 @@ public final class App implements Callable<Integer> {
     }
 
     private Try<String> validateSingleRemote() {
-        return git.run("remote")
+        return Try.of(() -> git.run("remote"))
                 .mapFailure(
                         Case($(), e -> new ProcessFailException(5, "Could not check git remotes: " + e.getMessage())))
                 .flatMap(output -> output.lines().count() == 1
@@ -113,7 +113,7 @@ public final class App implements Callable<Integer> {
 
     private Try<String> getDefaultBranch(String remote) {
         String prefix = "refs/remotes/" + remote + "/";
-        return git.run("symbolic-ref", prefix + "HEAD")
+        return Try.of(() -> git.run("symbolic-ref", prefix + "HEAD"))
                 .mapFailure(
                         Case($(), e -> new ProcessFailException(6, "Could not get default branch: " + e.getMessage())))
                 .flatMap(fullName -> {
@@ -126,13 +126,13 @@ public final class App implements Callable<Integer> {
     }
 
     private Try<String> getCurrentBranch() {
-        return git.getCurrentBranch()
+        return Try.of(git::getCurrentBranch)
                 .mapFailure(
                         Case($(), e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage())));
     }
 
     private Try<String> switchBranch(String branch) {
-        return git.run("checkout", branch)
+        return Try.of(() -> git.run("checkout", branch))
                 .mapFailure(Case(
                         $(),
                         e -> new ProcessFailException(

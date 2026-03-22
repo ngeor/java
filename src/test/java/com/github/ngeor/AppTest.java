@@ -2,7 +2,6 @@ package com.github.ngeor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.vavr.control.Try;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,10 +36,10 @@ class AppTest {
     private Git git;
 
     @BeforeEach
-    void beforeEach() {
+    void beforeEach() throws InterruptedException {
         git = new Git(tempDir.toFile());
         Git remoteGit = new Git(remoteDir.toFile());
-        remoteGit.initBare("master").get();
+        remoteGit.initBare("master");
     }
 
     @Test
@@ -94,11 +93,10 @@ class AppTest {
     }
 
     @Test
-    void testGitHasUntrackedFiles() {
+    void testGitHasUntrackedFiles() throws InterruptedException, IOException {
         // arrange
-        git.init()
-                .andThenTry(() -> Files.writeString(tempDir.resolve("pom.xml"), "<project></project>"))
-                .get();
+        git.init();
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
 
         // act
         act();
@@ -110,12 +108,11 @@ class AppTest {
     }
 
     @Test
-    void testGitHasStagedNonCommittedFiles() {
+    void testGitHasStagedNonCommittedFiles() throws InterruptedException, IOException {
         // arrange
-        git.init()
-                .andThenTry(() -> Files.writeString(tempDir.resolve("pom.xml"), "<project></project>"))
-                .flatMap(ignored -> git.add("pom.xml"))
-                .get();
+        git.init();
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        git.add("pom.xml");
 
         // act
         act();
@@ -127,14 +124,13 @@ class AppTest {
     }
 
     @Test
-    void testNoGitRemote() {
+    void testNoGitRemote() throws InterruptedException, IOException {
         // arrange
-        git.init()
-                .flatMap(ignored -> git.configure("Dummy User", "dummy@user.com"))
-                .andThenTry(() -> Files.writeString(tempDir.resolve("pom.xml"), "<project></project>"))
-                .flatMap(ignored -> git.add("pom.xml"))
-                .flatMap(ignored -> git.commit("Initial commit"))
-                .get();
+        git.init();
+        git.configure("Dummy User", "dummy@user.com");
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        git.add("pom.xml");
+        git.commit("Initial commit");
 
         // act
         act();
@@ -146,25 +142,24 @@ class AppTest {
     }
 
     @Test
-    void testNotOnDefaultBranch() {
+    void testNotOnDefaultBranch() throws InterruptedException, IOException {
         // arrange
-        cloneRepoAndPushInitialCommit()
-                // switch to a different branch
-                .flatMap(ignored -> git.createAndSwitchToBranch("feature"))
-                .get();
+        cloneRepoAndPushInitialCommit();
+        // switch to a different branch
+        git.createAndSwitchToBranch("feature");
 
         // act
         act();
 
         // assert
         assertThat(exitCode).isZero();
-        assertThat(git.getCurrentBranch().get()).isEqualTo("master");
+        assertThat(git.getCurrentBranch()).isEqualTo("master");
     }
 
     @Test
-    void testDirectoryExistsAndContainsPomXml() {
+    void testDirectoryExistsAndContainsPomXml() throws IOException, InterruptedException {
         // arrange
-        cloneRepoAndPushInitialCommit().get();
+        cloneRepoAndPushInitialCommit();
 
         // act
         act();
@@ -177,15 +172,15 @@ class AppTest {
         assertThat(systemErr.getText()).isEmpty();
     }
 
-    private Try<String> cloneRepoAndPushInitialCommit() {
-        return git.clone(remoteDir.toAbsolutePath().toString())
-                .flatMap(ignored -> git.configure("Dummy User", "dummy@user.com"))
-                .andThenTry(() -> Files.writeString(tempDir.resolve("pom.xml"), "<project></project>"))
-                .flatMap(ignored -> git.add("pom.xml"))
-                .flatMap(ignored -> git.commit("Initial commit"))
-                // a push is needed to mark the default branch
-                .flatMap(ignored -> git.push())
-                .flatMap(ignored -> git.setRemoteHead("origin", "master"));
+    private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
+        git.clone(remoteDir.toAbsolutePath().toString());
+        git.configure("Dummy User", "dummy@user.com");
+        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        git.add("pom.xml");
+        git.commit("Initial commit");
+        // a push is needed to mark the default branch
+        git.push();
+        git.setRemoteHead("origin", "master");
     }
 
     private void act() {
