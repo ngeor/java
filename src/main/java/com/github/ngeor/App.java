@@ -49,7 +49,8 @@ public final class App implements Callable<Integer> {
                 this::validateSingleRemote,
                 this::getCurrentBranch,
                 this::getDefaultBranch,
-                this::ensureOnDefaultBranch);
+                this::ensureOnDefaultBranch,
+                git::pull);
 
         List<String> stepNames = List.of(
                 "Check if directory exists",
@@ -59,7 +60,8 @@ public final class App implements Callable<Integer> {
                 "Ensure single git remote",
                 "Get current git branch",
                 "Get default git branch",
-                "Ensure on default git branch");
+                "Ensure on default git branch",
+                "Get latest changes from upstream");
 
         int stepNumber = 1;
         try {

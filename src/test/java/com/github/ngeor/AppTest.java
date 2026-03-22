@@ -159,6 +159,34 @@ class AppTest {
     }
 
     @Test
+    void testGetsLatestFromUpstream() throws IOException, InterruptedException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        Files.writeString(tempDir.resolve("README.md"), "A readme file");
+        git.add("README.md");
+        git.commit("Added readme");
+        git.push();
+
+        git.reset(true, 1);
+        assertThat(tempDir.resolve("README.md").toFile().exists())
+                .as("README should be gone after git reset")
+                .isFalse();
+
+        // act
+        act();
+
+        // assert
+        assertThat(exitCode).isZero();
+        assertThat(tempDir.resolve("README.md").toFile().exists())
+                .as("README should be back after git pull")
+                .isTrue();
+        assertThat(systemOut.getText())
+                .contains("Hello World! dryRun was false")
+                .contains("Directory is " + tempDir.toAbsolutePath());
+        assertThat(systemErr.getText()).isEmpty();
+    }
+
+    @Test
     void testDirectoryExistsAndContainsPomXml() throws IOException, InterruptedException {
         // arrange
         cloneRepoAndPushInitialCommit();

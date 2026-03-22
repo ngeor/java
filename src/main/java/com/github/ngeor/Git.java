@@ -87,4 +87,12 @@ public class Git {
     public String remote() throws InterruptedException {
         return processHelper.run("remote");
     }
+
+    public void pull() throws InterruptedException {
+        processHelper.runNoOutput("pull");
+    }
+
+    public void reset(boolean hard, int numberOfCommits) throws InterruptedException {
+        processHelper.runNoOutput("reset", hard ? "--hard" : "--soft", "HEAD~" + numberOfCommits);
+    }
 }
