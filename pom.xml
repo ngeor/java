@@ -39,7 +39,8 @@
     <picocli.version>4.7.7</picocli.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spotless-maven-plugin.version>3.4.0</spotless-maven-plugin.version>
-    <system-stubs-jupiter.version>2.1.6</system-stubs-jupiter.version>
+    <system-stubs-jupiter.version>2.1.8</system-stubs-jupiter.version>
+    <vavr.version>1.0.1</vavr.version>
   </properties>
   <dependencyManagement>
     <dependencies>
@@ -60,6 +61,11 @@
     </dependencies>
   </dependencyManagement>
   <dependencies>
+    <dependency>
+      <groupId>io.vavr</groupId>
+      <artifactId>vavr</artifactId>
+      <version>${vavr.version}</version>
+    </dependency>
     <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli</artifactId>

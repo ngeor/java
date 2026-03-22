@@ -1,5 +1,9 @@
 package com.github.ngeor;
 
+import static io.vavr.API.$;
+import static io.vavr.API.Case;
+
+import io.vavr.control.Try;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -38,11 +42,11 @@ public final class App implements Callable<Integer> {
         git = new Git(directory.toFile());
 
         try {
-            validateDirectoryExists()
+            Try.run(this::validateDirectoryExists)
                     .andThen(this::validatePomXmlExists)
                     .andThen(this::validateGitDirectoryExists)
-                    .andThen(this::validatePendingGitChanges)
-                    .andThen(this::validateSingleRemote)
+                    .flatMap(ignored -> validatePendingGitChanges())
+                    .flatMap(ignored -> validateSingleRemote())
                     .flatMap(this::ensureOnDefaultBranch)
                     .get();
         } catch (ProcessFailException ex) {
@@ -55,77 +59,83 @@ public final class App implements Callable<Integer> {
         return 0;
     }
 
-    private Result<String, ProcessFailException> validateDirectoryExists() {
+    private void validateDirectoryExists() {
         if (directory.toFile().isDirectory()) {
-            return Result.ok("");
+            return;
         }
-        return Result.err(new ProcessFailException(1, "Directory " + directory + " does not exist"));
+        throw new ProcessFailException(1, "Directory " + directory + " does not exist");
     }
 
-    private Result<String, ProcessFailException> validatePomXmlExists() {
+    private void validatePomXmlExists() {
         if (directory.resolve("pom.xml").toFile().isFile()) {
-            return Result.ok("");
+            return;
         }
-        return Result.err(new ProcessFailException(2, "Directory " + directory + " does not contain a pom.xml file"));
+        throw new ProcessFailException(2, "Directory " + directory + " does not contain a pom.xml file");
     }
 
-    private Result<String, ProcessFailException> validateGitDirectoryExists() {
+    private void validateGitDirectoryExists() {
         if (directory.resolve(".git").toFile().isDirectory()) {
-            return Result.ok("");
+            return;
         }
-        return Result.err(new ProcessFailException(3, "Directory " + directory + " does not contain a .git directory"));
+        throw new ProcessFailException(3, "Directory " + directory + " does not contain a .git directory");
     }
 
-    private Result<String, ProcessFailException> validatePendingGitChanges() {
+    private Try<String> validatePendingGitChanges() {
         return git.run("status", "--porcelain")
-                .mapErr(e -> new ProcessFailException(4, "Could not check git status: " + e.getMessage()))
+                .mapFailure(
+                        Case($(), e -> new ProcessFailException(4, "Could not check git status: " + e.getMessage())))
                 .flatMap(output -> output.isEmpty()
-                        ? Result.ok(output)
-                        : Result.err(new ProcessFailException(
+                        ? Try.success(output)
+                        : Try.failure(new ProcessFailException(
                                 4, "Directory " + directory + " contains pending git changes")));
     }
 
-    private Result<String, ProcessFailException> validateSingleRemote() {
+    private Try<String> validateSingleRemote() {
         return git.run("remote")
-                .mapErr(e -> new ProcessFailException(5, "Could not check git remotes: " + e.getMessage()))
+                .mapFailure(
+                        Case($(), e -> new ProcessFailException(5, "Could not check git remotes: " + e.getMessage())))
                 .flatMap(output -> output.lines().count() == 1
-                        ? Result.ok(output)
-                        : Result.err(new ProcessFailException(
+                        ? Try.success(output)
+                        : Try.failure(new ProcessFailException(
                                 5, "Directory " + directory + " does not have exactly one git remote")));
     }
 
-    private Result<String, ProcessFailException> ensureOnDefaultBranch(String remote) {
+    private Try<String> ensureOnDefaultBranch(String remote) {
         return getDefaultBranch(remote)
                 .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
                     if (!defaultBranch.equals(currentBranch)) {
                         return switchBranch(defaultBranch);
                     }
 
-                    return Result.ok("");
+                    return Try.success("");
                 }));
     }
 
-    private Result<String, ProcessFailException> getDefaultBranch(String remote) {
+    private Try<String> getDefaultBranch(String remote) {
         String prefix = "refs/remotes/" + remote + "/";
         return git.run("symbolic-ref", prefix + "HEAD")
-                .mapErr(e -> new ProcessFailException(6, "Could not get default branch: " + e.getMessage()))
+                .mapFailure(
+                        Case($(), e -> new ProcessFailException(6, "Could not get default branch: " + e.getMessage())))
                 .flatMap(fullName -> {
                     if (fullName.startsWith(prefix)) {
-                        return Result.ok(fullName.substring(prefix.length()));
+                        return Try.success(fullName.substring(prefix.length()));
                     } else {
-                        return Result.err(new ProcessFailException(6, "Invalid default branch: " + fullName));
+                        return Try.failure(new ProcessFailException(6, "Invalid default branch: " + fullName));
                     }
                 });
     }
 
-    private Result<String, ProcessFailException> getCurrentBranch() {
+    private Try<String> getCurrentBranch() {
         return git.getCurrentBranch()
-                .mapErr(e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage()));
+                .mapFailure(
+                        Case($(), e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage())));
     }
 
-    private Result<String, ProcessFailException> switchBranch(String branch) {
+    private Try<String> switchBranch(String branch) {
         return git.run("checkout", branch)
-                .mapErr(e ->
-                        new ProcessFailException(8, "Could not switch to branch " + branch + ": " + e.getMessage()));
+                .mapFailure(Case(
+                        $(),
+                        e -> new ProcessFailException(
+                                8, "Could not switch to branch " + branch + ": " + e.getMessage())));
     }
 }

@@ -127,12 +127,10 @@ class AppTest {
     void testNoGitRemote() throws Exception {
         // arrange
         git.init()
-                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .flatMap(ignored -> git.configure("Dummy User", "dummy@user.com"))
                 .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        git.add("pom.xml")
-                .andThen(() -> git.commit("Initial commit"))
-                .get();
+        git.add("pom.xml").flatMap(ignored -> git.commit("Initial commit")).get();
 
         // act
         act();
@@ -147,14 +145,14 @@ class AppTest {
     void testNotOnDefaultBranch() throws Exception {
         // arrange
         git.clone(remoteDir.toAbsolutePath().toString())
-                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .flatMap(ignored -> git.configure("Dummy User", "dummy@user.com"))
                 .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
         git.add("pom.xml")
-                .andThen(() -> git.commit("Initial commit"))
+                .flatMap(ignored -> git.commit("Initial commit"))
                 // a push is needed to mark the default branch
-                .andThen(git::push)
-                .andThen(() -> git.setRemoteHead("origin", "master"))
+                .flatMap(ignored -> git.push())
+                .flatMap(ignored -> git.setRemoteHead("origin", "master"))
                 .get();
         // switch to a different branch
         git.createAndSwitchToBranch("feature").get();
@@ -171,14 +169,14 @@ class AppTest {
     void testDirectoryExistsAndContainsPomXml() throws Exception {
         // arrange
         git.clone(remoteDir.toAbsolutePath().toString())
-                .andThen(() -> git.configure("Dummy User", "dummy@user.com"))
+                .flatMap(ignored -> git.configure("Dummy User", "dummy@user.com"))
                 .get();
         Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
         git.add("pom.xml")
-                .andThen(() -> git.commit("Initial commit"))
+                .flatMap(ignored -> git.commit("Initial commit"))
                 // a push is needed to mark the default branch
-                .andThen(git::push)
-                .andThen(() -> git.setRemoteHead("origin", "master"))
+                .flatMap(ignored -> git.push())
+                .flatMap(ignored -> git.setRemoteHead("origin", "master"))
                 .get();
 
         // act
