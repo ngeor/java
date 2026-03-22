@@ -1,7 +1,6 @@
 package com.github.ngeor;
 
 import io.vavr.control.Try;
-
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -83,8 +82,7 @@ public final class App implements Callable<Integer> {
         return wrapFailure(Try.of(() -> git.run("status", "--porcelain")), 4, "Could not check git status")
                 .flatMap(output -> output.isEmpty()
                         ? Try.success(output)
-                        : Try.failure(new AppException(
-                                4, "Directory " + directory + " contains pending git changes")));
+                        : Try.failure(new AppException(4, "Directory " + directory + " contains pending git changes")));
     }
 
     private Try<String> validateSingleRemote() {
@@ -107,15 +105,7 @@ public final class App implements Callable<Integer> {
     }
 
     private Try<String> getDefaultBranch(String remote) {
-        String prefix = "refs/remotes/" + remote + "/";
-        return wrapFailure(Try.of(() -> git.run("symbolic-ref", prefix + "HEAD")), 6, "Could not get default branch")
-                .flatMap(fullName -> {
-                    if (fullName.startsWith(prefix)) {
-                        return Try.success(fullName.substring(prefix.length()));
-                    } else {
-                        return Try.failure(new AppException(6, "Invalid default branch: " + fullName));
-                    }
-                });
+        return wrapFailure(Try.of(() -> git.getDefaultBranch(remote)), 6, "Could not get default branch");
     }
 
     private Try<String> getCurrentBranch() {
@@ -129,7 +119,11 @@ public final class App implements Callable<Integer> {
     private <T> Try<T> wrapFailure(Try<T> t, int code, String message) {
         if (t.isFailure()) {
             Throwable cause = t.getCause();
-            if (cause instanceof UncheckedIOException || cause instanceof ProcessFailException) {
+            if (cause instanceof UncheckedIOException
+                    || cause instanceof ProcessFailException
+                    || cause instanceof GitException
+                    || cause instanceof NullPointerException
+                    || cause instanceof IllegalArgumentException) {
                 return Try.failure(new AppException(code, message + ": " + cause.getMessage()));
             }
         }
