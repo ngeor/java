@@ -14,6 +14,7 @@ jobs:
         java-version: '21'
         distribution: 'zulu'
         cache: 'maven'
+    - run: cargo install git-cliff
     - run: >-
         ./scripts/release.py
         --gpg-key-file ./scripts/keys.asc

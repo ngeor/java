@@ -18,4 +18,5 @@ jobs:
         java-version: '21'
         distribution: 'zulu'
         cache: 'maven'
+    - run: cargo install git-cliff
     - run: mvn -B -ntp package --file pom.xml
