@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ import uk.org.webcompere.systemstubs.stream.SystemOut;
 @ExtendWith(SystemStubsExtension.class)
 class AppTest {
     @TempDir
-    private Path tempDir;
+    private Path workingDir;
 
     @TempDir
     private Path remoteDir;
@@ -41,7 +42,7 @@ class AppTest {
 
     @BeforeEach
     void beforeEach() throws InterruptedException {
-        git = new Git(tempDir.toFile());
+        git = new Git(workingDir.toFile());
         Git remoteGit = new Git(remoteDir.toFile());
         remoteGit.initBare("master");
     }
@@ -49,13 +50,13 @@ class AppTest {
     @Test
     void testDirectoryDoesNotExist() {
         // act
-        act(tempDir.resolve("oops"));
+        act(workingDir.resolve("oops"));
 
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.resolve("oops").toAbsolutePath() + " does not exist");
+                    .contains("Directory " + workingDir.resolve("oops").toAbsolutePath() + " does not exist");
         });
     }
 
@@ -68,14 +69,14 @@ class AppTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a pom.xml file");
+                    .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a pom.xml file");
         });
     }
 
     @Test
     void testDoesNotContainDotGit() throws IOException {
         // arrange
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
 
         // act
         act();
@@ -84,15 +85,15 @@ class AppTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isEqualTo(3);
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a .git directory");
+                    .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a .git directory");
         });
     }
 
     @Test
     void testGitDirectoryIsCorrupt() throws IOException {
         // arrange
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
-        Files.createDirectory(tempDir.resolve(".git"));
+        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+        Files.createDirectory(workingDir.resolve(".git"));
 
         // act
         act();
@@ -110,7 +111,7 @@ class AppTest {
     void testGitHasUntrackedFiles() throws InterruptedException, IOException {
         // arrange
         git.init();
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
 
         // act
         act();
@@ -119,7 +120,7 @@ class AppTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+                    .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
         });
     }
 
@@ -127,7 +128,7 @@ class AppTest {
     void testGitHasStagedNonCommittedFiles() throws InterruptedException, IOException {
         // arrange
         git.init();
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
         git.add("pom.xml");
 
         // act
@@ -137,7 +138,7 @@ class AppTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+                    .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
         });
     }
 
@@ -146,7 +147,7 @@ class AppTest {
         // arrange
         git.init();
         git.configure("Dummy User", "dummy@user.com");
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
         git.add("pom.xml");
         git.commit("Initial commit");
 
@@ -157,7 +158,7 @@ class AppTest {
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
-                    .contains("Directory " + tempDir.toAbsolutePath() + " does not have exactly one git remote");
+                    .contains("Directory " + workingDir.toAbsolutePath() + " does not have exactly one git remote");
         });
     }
 
@@ -183,13 +184,13 @@ class AppTest {
     void testGetsLatestFromUpstream() throws IOException, InterruptedException {
         // arrange
         cloneRepoAndPushInitialCommit();
-        Files.writeString(tempDir.resolve("README.md"), "A readme file");
+        Files.writeString(workingDir.resolve("README.md"), "A readme file");
         git.add("README.md");
         git.commit("Added readme");
         git.push();
 
         git.reset(true, 1);
-        assertThat(tempDir.resolve("README.md").toFile().exists())
+        assertThat(workingDir.resolve("README.md").toFile().exists())
                 .as("README should be gone after git reset")
                 .isFalse();
 
@@ -199,18 +200,18 @@ class AppTest {
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isZero();
-            softly.assertThat(tempDir.resolve("README.md").toFile().exists())
+            softly.assertThat(workingDir.resolve("README.md").toFile().exists())
                     .as("README should be back after git pull")
                     .isTrue();
             softly.assertThat(systemOut.getText())
                     .contains("Hello World! dryRun was false")
-                    .contains("Directory is " + tempDir.toAbsolutePath());
+                    .contains("Directory is " + workingDir.toAbsolutePath());
             softly.assertThat(systemErr.getText()).isEmpty();
         });
     }
 
     @Test
-    void testDirectoryExistsAndContainsPomXml() throws IOException, InterruptedException {
+    void testFullFlow() throws IOException, InterruptedException {
         // arrange
         cloneRepoAndPushInitialCommit();
 
@@ -218,13 +219,24 @@ class AppTest {
         act();
 
         // assert
+        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        List<String> tags = git.tag().lines().toList();
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isZero();
             softly.assertThat(systemOut.getText())
                     .contains("Hello World! dryRun was false")
-                    .contains("Directory is " + tempDir.toAbsolutePath());
+                    .contains("Directory is " + workingDir.toAbsolutePath());
             softly.assertThat(systemErr.getText()).isEmpty();
+            softly.assertThat(pomXmlContents)
+                    .contains("<version>1.2.1-SNAPSHOT</version>")
+                    .contains("<tag>HEAD</tag>");
+            softly.assertThat(tags).containsExactly("v1.2.0");
         });
+        git.switchToBranch("v1.2.0");
+        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                .contains("<version>1.2.0</version>")
+                .contains("<tag>v1.2.0</tag>"));
     }
 
     private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
@@ -235,10 +247,10 @@ class AppTest {
             assertThat(inputStream).isNotNull();
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             inputStream.transferTo(byteArrayOutputStream);
-            String contents = byteArrayOutputStream.toString(StandardCharsets.UTF_8)
-                .replaceAll("\\$REMOTE", remotePath);
+            String contents =
+                    byteArrayOutputStream.toString(StandardCharsets.UTF_8).replaceAll("\\$REMOTE", remotePath);
             assertThat(contents).contains(remotePath);
-           Files.writeString(tempDir.resolve("pom.xml"), contents);
+            Files.writeString(workingDir.resolve("pom.xml"), contents);
         }
         git.add("pom.xml");
         git.commit("Initial commit");
@@ -248,10 +260,14 @@ class AppTest {
     }
 
     private void act() {
-        act(tempDir);
+        act(workingDir);
     }
 
     private void act(Path directory) {
-        exitCode = App.executeWithoutExiting(new String[] {"--directory", directory.toString()});
+        exitCode = App.executeWithoutExiting(new String[] {
+            "--development-version", "1.2.1-SNAPSHOT",
+            "--release-version", "1.2.0",
+            "--directory", directory.toString()
+        });
     }
 }

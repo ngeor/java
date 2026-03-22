@@ -95,4 +95,8 @@ public class Git {
     public void reset(boolean hard, int numberOfCommits) throws InterruptedException {
         processHelper.runNoOutput("reset", hard ? "--hard" : "--soft", "HEAD~" + numberOfCommits);
     }
+
+    public String tag() throws InterruptedException {
+        return processHelper.run("tag");
+    }
 }

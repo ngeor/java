@@ -19,6 +19,12 @@ public final class App implements Callable<Integer> {
     @Option(names = "--directory", description = "The working directory", defaultValue = ".")
     private Path directory;
 
+    @Option(names = "--development-version", description = "The next development version", required = true)
+    private String developmentVersion;
+
+    @Option(names = "--release-version", description = "The release version", required = true)
+    private String releaseVersion;
+
     private Git git;
     private String remote;
     private String currentBranch;
@@ -53,7 +59,8 @@ public final class App implements Callable<Integer> {
                 this::getDefaultBranch,
                 this::ensureOnDefaultBranch,
                 git::pull,
-                maven::releaseClean);
+                maven::releaseClean,
+                this::prepareRelease);
 
         List<String> stepNames = List.of(
                 "Check if directory exists",
@@ -65,7 +72,8 @@ public final class App implements Callable<Integer> {
                 "Get default git branch",
                 "Ensure on default git branch",
                 "Get latest changes from upstream",
-                "Clean Maven release");
+                "Clean Maven release",
+                "Prepare Maven release");
 
         int stepNumber = 1;
         try {
@@ -140,5 +148,10 @@ public final class App implements Callable<Integer> {
         if (!defaultBranch.equals(currentBranch)) {
             git.switchToBranch(defaultBranch);
         }
+    }
+
+    private void prepareRelease() throws InterruptedException {
+        String tag = "v" + releaseVersion;
+        maven.releasePrepare(developmentVersion, releaseVersion, tag);
     }
 }

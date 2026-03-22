@@ -22,8 +22,8 @@
     </developer>
   </developers>
   <scm>
-    <connection>$REMOTE</connection>
-    <developerConnection>$REMOTE</developerConnection>
+    <connection>scm:git:$REMOTE</connection>
+    <developerConnection>scm:git:$REMOTE</developerConnection>
     <tag>HEAD</tag>
     <url>https://github.com/ngeor/java</url>
   </scm>
