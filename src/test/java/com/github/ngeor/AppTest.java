@@ -2,9 +2,13 @@ package com.github.ngeor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,9 +52,11 @@ class AppTest {
         act(tempDir.resolve("oops"));
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.resolve("oops").toAbsolutePath() + " does not exist");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.resolve("oops").toAbsolutePath() + " does not exist");
+        });
     }
 
     @Test
@@ -59,9 +65,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a pom.xml file");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a pom.xml file");
+        });
     }
 
     @Test
@@ -73,9 +81,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isEqualTo(3);
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a .git directory");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isEqualTo(3);
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.toAbsolutePath() + " does not contain a .git directory");
+        });
     }
 
     @Test
@@ -88,10 +98,12 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isEqualTo(4);
-        assertThat(systemErr.getText())
-                .contains("Ensure no pending git changes")
-                .contains("not a git repository");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isEqualTo(4);
+            softly.assertThat(systemErr.getText())
+                    .contains("Ensure no pending git changes")
+                    .contains("not a git repository");
+        });
     }
 
     @Test
@@ -104,9 +116,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+        });
     }
 
     @Test
@@ -120,9 +134,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.toAbsolutePath() + " contains pending git changes");
+        });
     }
 
     @Test
@@ -138,9 +154,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText())
-                .contains("Directory " + tempDir.toAbsolutePath() + " does not have exactly one git remote");
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Directory " + tempDir.toAbsolutePath() + " does not have exactly one git remote");
+        });
     }
 
     @Test
@@ -154,8 +172,11 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isZero();
-        assertThat(git.getCurrentBranch()).isEqualTo("master");
+        String currentBranch = git.getCurrentBranch();
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isZero();
+            softly.assertThat(currentBranch).isEqualTo("master");
+        });
     }
 
     @Test
@@ -176,14 +197,16 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isZero();
-        assertThat(tempDir.resolve("README.md").toFile().exists())
-                .as("README should be back after git pull")
-                .isTrue();
-        assertThat(systemOut.getText())
-                .contains("Hello World! dryRun was false")
-                .contains("Directory is " + tempDir.toAbsolutePath());
-        assertThat(systemErr.getText()).isEmpty();
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isZero();
+            softly.assertThat(tempDir.resolve("README.md").toFile().exists())
+                    .as("README should be back after git pull")
+                    .isTrue();
+            softly.assertThat(systemOut.getText())
+                    .contains("Hello World! dryRun was false")
+                    .contains("Directory is " + tempDir.toAbsolutePath());
+            softly.assertThat(systemErr.getText()).isEmpty();
+        });
     }
 
     @Test
@@ -195,17 +218,28 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isZero();
-        assertThat(systemOut.getText())
-                .contains("Hello World! dryRun was false")
-                .contains("Directory is " + tempDir.toAbsolutePath());
-        assertThat(systemErr.getText()).isEmpty();
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isZero();
+            softly.assertThat(systemOut.getText())
+                    .contains("Hello World! dryRun was false")
+                    .contains("Directory is " + tempDir.toAbsolutePath());
+            softly.assertThat(systemErr.getText()).isEmpty();
+        });
     }
 
     private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
-        git.clone(remoteDir.toAbsolutePath().toString());
+        String remotePath = remoteDir.toAbsolutePath().toString();
+        git.clone(remotePath);
         git.configure("Dummy User", "dummy@user.com");
-        Files.writeString(tempDir.resolve("pom.xml"), "<project></project>");
+        try (InputStream inputStream = getClass().getResourceAsStream("/sample_pom.xml")) {
+            assertThat(inputStream).isNotNull();
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            inputStream.transferTo(byteArrayOutputStream);
+            String contents = byteArrayOutputStream.toString(StandardCharsets.UTF_8)
+                .replaceAll("\\$REMOTE", remotePath);
+            assertThat(contents).contains(remotePath);
+           Files.writeString(tempDir.resolve("pom.xml"), contents);
+        }
         git.add("pom.xml");
         git.commit("Initial commit");
         // a push is needed to mark the default branch

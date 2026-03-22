@@ -23,6 +23,7 @@ public final class App implements Callable<Integer> {
     private String remote;
     private String currentBranch;
     private String defaultBranch;
+    private Maven maven;
 
     private App() {}
 
@@ -40,6 +41,7 @@ public final class App implements Callable<Integer> {
         Objects.requireNonNull(directory, "Directory cannot be null");
         directory = directory.toAbsolutePath().normalize();
         git = new Git(directory.toFile());
+        maven = new Maven(directory.toFile());
 
         List<Step> steps = List.of(
                 this::validateDirectoryExists,
@@ -50,7 +52,8 @@ public final class App implements Callable<Integer> {
                 this::getCurrentBranch,
                 this::getDefaultBranch,
                 this::ensureOnDefaultBranch,
-                git::pull);
+                git::pull,
+                maven::releaseClean);
 
         List<String> stepNames = List.of(
                 "Check if directory exists",
@@ -61,7 +64,8 @@ public final class App implements Callable<Integer> {
                 "Get current git branch",
                 "Get default git branch",
                 "Ensure on default git branch",
-                "Get latest changes from upstream");
+                "Get latest changes from upstream",
+                "Clean Maven release");
 
         int stepNumber = 1;
         try {

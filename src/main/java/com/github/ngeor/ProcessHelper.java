@@ -60,6 +60,10 @@ public class ProcessHelper {
         String stdErr;
         try {
             stdErr = readerToString(process.errorReader());
+            if (stdErr.isBlank()) {
+                // some processes do not write their errors to stderr but stdout instead
+                stdErr = readerToString(process.inputReader());
+            }
         } catch (IOException ex) {
             throw new UncheckedIOException("Could not read error stream", ex);
         }
