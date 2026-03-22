@@ -203,9 +203,7 @@ class AppTest {
             softly.assertThat(workingDir.resolve("README.md").toFile().exists())
                     .as("README should be back after git pull")
                     .isTrue();
-            softly.assertThat(systemOut.getText())
-                    .contains("Hello World! dryRun was false")
-                    .contains("Directory is " + workingDir.toAbsolutePath());
+            softly.assertThat(systemOut.getText()).isEmpty();
             softly.assertThat(systemErr.getText()).isEmpty();
         });
     }
@@ -223,9 +221,7 @@ class AppTest {
         List<String> tags = git.tag().lines().toList();
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemOut.getText())
-                    .contains("Hello World! dryRun was false")
-                    .contains("Directory is " + workingDir.toAbsolutePath());
+            softly.assertThat(systemOut.getText()).isEmpty();
             softly.assertThat(systemErr.getText()).isEmpty();
             softly.assertThat(pomXmlContents)
                     .contains("<version>1.2.1-SNAPSHOT</version>")

@@ -49,60 +49,39 @@ public final class App implements Callable<Integer> {
         git = new Git(directory.toFile());
         maven = new Maven(directory.toFile());
 
-        List<Step> steps = List.of(
-                this::validateDirectoryExists,
-                this::validatePomXmlExists,
-                this::validateGitDirectoryExists,
-                this::validatePendingGitChanges,
-                this::validateSingleRemote,
-                this::getCurrentBranch,
-                this::getDefaultBranch,
-                this::ensureOnDefaultBranch,
-                git::pull,
-                maven::releaseClean,
-                this::prepareRelease,
-                this::runGitCliff,
-                git::pushFollowTags,
-                maven::releaseClean);
+        List<StepDefinition> steps = List.of(
+                new StepDefinition("Check if directory exists", this::validateDirectoryExists),
+                new StepDefinition("Check if pom.xml exists", this::validatePomXmlExists),
+                new StepDefinition("Check if directory is a git working directory", this::validateGitDirectoryExists),
+                new StepDefinition("Ensure no pending git changes", this::validatePendingGitChanges),
+                new StepDefinition("Ensure single git remote", this::validateSingleRemote),
+                new StepDefinition("Get current git branch", this::getCurrentBranch),
+                new StepDefinition("Get default git branch", this::getDefaultBranch),
+                new StepDefinition("Ensure on default git branch", this::ensureOnDefaultBranch),
+                new StepDefinition("Get latest changes from upstream", git::pull),
+                new StepDefinition("Clean Maven release", maven::releaseClean),
+                new StepDefinition("Prepare Maven release", this::prepareRelease),
+                new StepDefinition("Run git-cliff", this::runGitCliff),
+                new StepDefinition("Push upstream", git::pushFollowTags),
+                new StepDefinition("Final Maven release:clean", maven::releaseClean));
 
-        List<String> stepNames = List.of(
-                "Check if directory exists",
-                "Check if pom.xml exists",
-                "Check if directory is a git working directory",
-                "Ensure no pending git changes",
-                "Ensure single git remote",
-                "Get current git branch",
-                "Get default git branch",
-                "Ensure on default git branch",
-                "Get latest changes from upstream",
-                "Clean Maven release",
-                "Prepare Maven release",
-                "Run git-cliff",
-                "Push upstream",
-                "Final Maven release:clean");
-
-        int stepNumber = 1;
-        try {
-            for (Step step : steps) {
-                step.run();
+        int stepNumber = 0;
+        for (StepDefinition stepDefinition : steps) {
+            try {
                 stepNumber++;
+                stepDefinition.step().run();
+            } catch (ProcessFailException ex) {
+                System.err.printf(
+                        "[%s] Child process exited with code %d : %s%n",
+                        stepDefinition.name(), ex.getCode(), ex.getMessage());
+                return stepNumber;
+            } catch (RuntimeException ex) {
+                System.err.printf("[%s] %s%n", stepDefinition.name(), ex.getMessage());
+                return stepNumber;
             }
-        } catch (ProcessFailException ex) {
-            System.err.println(stepNames.get(stepNumber - 1) + ": " + ex.getCode() + " - " + ex.getMessage());
-            return stepNumber;
-        } catch (RuntimeException ex) {
-            System.err.println(ex.getMessage());
-            return stepNumber;
         }
 
-        System.out.println("Hello World! dryRun was " + dryRun);
-        System.out.println("Directory is " + directory);
         return 0;
-    }
-
-    @FunctionalInterface
-    interface Step {
-        void run() throws InterruptedException;
     }
 
     private void validateDirectoryExists() {
