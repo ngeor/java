@@ -88,8 +88,10 @@ class AppTest {
         act();
 
         // assert
-        assertThat(exitCode).isNotZero();
-        assertThat(systemErr.getText()).contains("Could not check git status").contains("not a git repository");
+        assertThat(exitCode).isEqualTo(4);
+        assertThat(systemErr.getText())
+                .contains("Ensure no pending git changes")
+                .contains("not a git repository");
     }
 
     @Test

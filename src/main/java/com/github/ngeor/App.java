@@ -1,8 +1,7 @@
 package com.github.ngeor;
 
-import io.vavr.control.Try;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
@@ -21,6 +20,9 @@ public final class App implements Callable<Integer> {
     private Path directory;
 
     private Git git;
+    private String remote;
+    private String currentBranch;
+    private String defaultBranch;
 
     private App() {}
 
@@ -33,23 +35,44 @@ public final class App implements Callable<Integer> {
     }
 
     @Override
-    public Integer call() {
+    public Integer call() throws InterruptedException {
         // sanity check against Picocli framework and normalize directory
         Objects.requireNonNull(directory, "Directory cannot be null");
         directory = directory.toAbsolutePath().normalize();
         git = new Git(directory.toFile());
 
+        List<Step> steps = List.of(
+                this::validateDirectoryExists,
+                this::validatePomXmlExists,
+                this::validateGitDirectoryExists,
+                this::validatePendingGitChanges,
+                this::validateSingleRemote,
+                this::getCurrentBranch,
+                this::getDefaultBranch,
+                this::ensureOnDefaultBranch);
+
+        List<String> stepNames = List.of(
+                "Check if directory exists",
+                "Check if pom.xml exists",
+                "Check if directory is a git working directory",
+                "Ensure no pending git changes",
+                "Ensure single git remote",
+                "Get current git branch",
+                "Get default git branch",
+                "Ensure on default git branch");
+
+        int stepNumber = 1;
         try {
-            Try.run(this::validateDirectoryExists)
-                    .andThen(this::validatePomXmlExists)
-                    .andThen(this::validateGitDirectoryExists)
-                    .flatMap(ignored -> validatePendingGitChanges())
-                    .flatMap(ignored -> validateSingleRemote())
-                    .flatMap(this::ensureOnDefaultBranch)
-                    .get();
-        } catch (AppException ex) {
+            for (Step step : steps) {
+                step.run();
+                stepNumber++;
+            }
+        } catch (ProcessFailException ex) {
+            System.err.println(stepNames.get(stepNumber - 1) + ": " + ex.getCode() + " - " + ex.getMessage());
+            return stepNumber;
+        } catch (RuntimeException ex) {
             System.err.println(ex.getMessage());
-            return ex.getCode();
+            return stepNumber;
         }
 
         System.out.println("Hello World! dryRun was " + dryRun);
@@ -57,78 +80,59 @@ public final class App implements Callable<Integer> {
         return 0;
     }
 
+    @FunctionalInterface
+    interface Step {
+        void run() throws InterruptedException;
+    }
+
     private void validateDirectoryExists() {
         if (directory.toFile().isDirectory()) {
             return;
         }
-        throw new AppException(1, "Directory " + directory + " does not exist");
+        throw new IllegalStateException("Directory " + directory + " does not exist");
     }
 
     private void validatePomXmlExists() {
         if (directory.resolve("pom.xml").toFile().isFile()) {
             return;
         }
-        throw new AppException(2, "Directory " + directory + " does not contain a pom.xml file");
+        throw new IllegalStateException("Directory " + directory + " does not contain a pom.xml file");
     }
 
     private void validateGitDirectoryExists() {
         if (directory.resolve(".git").toFile().isDirectory()) {
             return;
         }
-        throw new AppException(3, "Directory " + directory + " does not contain a .git directory");
+        throw new IllegalStateException("Directory " + directory + " does not contain a .git directory");
     }
 
-    private Try<Void> validatePendingGitChanges() {
-        return wrapFailure(Try.of(git::statusPorcelain), 4, "Could not check git status")
-                .flatMap(output -> output.isEmpty()
-                        ? Try.success(null)
-                        : Try.failure(new AppException(4, "Directory " + directory + " contains pending git changes")));
+    private void validatePendingGitChanges() throws InterruptedException {
+        String status = git.statusPorcelain();
+        if (!status.isEmpty()) {
+            throw new IllegalStateException("Directory " + directory + " contains pending git changes");
+        }
     }
 
-    private Try<String> validateSingleRemote() {
-        return wrapFailure(Try.of(git::remote), 5, "Could not check git remotes")
-                .flatMap(output -> output.lines().count() == 1
-                        ? Try.success(output)
-                        : Try.failure(new AppException(
-                                5, "Directory " + directory + " does not have exactly one git remote")));
-    }
-
-    private Try<Void> ensureOnDefaultBranch(String remote) {
-        return getDefaultBranch(remote)
-                .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
-                    if (!defaultBranch.equals(currentBranch)) {
-                        return switchBranch(defaultBranch);
-                    }
-
-                    return Try.success(null);
-                }));
-    }
-
-    private Try<String> getDefaultBranch(String remote) {
-        return wrapFailure(Try.of(() -> git.getDefaultBranch(remote)), 6, "Could not get default branch");
-    }
-
-    private Try<String> getCurrentBranch() {
-        return wrapFailure(Try.of(git::getCurrentBranch), 7, "Could not get current branch");
-    }
-
-    private Try<Void> switchBranch(String branch) {
-        return wrapFailure(Try.run(() -> git.switchToBranch(branch)), 8, "Could not switch to branch " + branch);
-    }
-
-    private <T> Try<T> wrapFailure(Try<T> t, int code, String message) {
-        if (t.isFailure()) {
-            Throwable cause = t.getCause();
-            if (cause instanceof UncheckedIOException
-                    || cause instanceof ProcessFailException
-                    || cause instanceof GitException
-                    || cause instanceof NullPointerException
-                    || cause instanceof IllegalArgumentException) {
-                return Try.failure(new AppException(code, message + ": " + cause.getMessage()));
-            }
+    private void validateSingleRemote() throws InterruptedException {
+        String output = git.remote();
+        if (output.lines().count() != 1) {
+            throw new IllegalStateException("Directory " + directory + " does not have exactly one git remote");
         }
 
-        // leave success and InterruptedException alone
-        return t;
+        remote = output;
+    }
+
+    private void getCurrentBranch() throws InterruptedException {
+        currentBranch = git.getCurrentBranch();
+    }
+
+    private void getDefaultBranch() throws InterruptedException {
+        defaultBranch = git.getDefaultBranch(remote);
+    }
+
+    private void ensureOnDefaultBranch() throws InterruptedException {
+        if (!defaultBranch.equals(currentBranch)) {
+            git.switchToBranch(defaultBranch);
+        }
     }
 }
