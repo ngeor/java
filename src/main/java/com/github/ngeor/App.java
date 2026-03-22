@@ -25,6 +25,11 @@ public final class App implements Callable<Integer> {
     @Option(names = "--release-version", description = "The release version", required = true)
     private String releaseVersion;
 
+    @Option(
+            names = "--tag",
+            description = "Override the git tag for the release (defaults to v plus the release version")
+    private String tag;
+
     private Git git;
     private String remote;
     private String currentBranch;
@@ -48,6 +53,10 @@ public final class App implements Callable<Integer> {
         directory = directory.toAbsolutePath().normalize();
         git = new Git(directory.toFile());
         maven = new Maven(directory.toFile());
+
+        if (tag == null || tag.isBlank()) {
+            tag = "v" + releaseVersion;
+        }
 
         List<StepDefinition> steps = List.of(
                 new StepDefinition("Check if directory exists", this::validateDirectoryExists),
@@ -136,7 +145,6 @@ public final class App implements Callable<Integer> {
     }
 
     private void prepareRelease() throws InterruptedException {
-        String tag = "v" + releaseVersion;
         maven.releasePrepare(developmentVersion, releaseVersion, tag);
     }
 

@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -212,6 +213,7 @@ class AppTest {
     void testFullFlow() throws IOException, InterruptedException {
         // arrange
         cloneRepoAndPushInitialCommit();
+        final String tag = "v1.2.0";
 
         // act
         act();
@@ -226,13 +228,44 @@ class AppTest {
             softly.assertThat(pomXmlContents)
                     .contains("<version>1.2.1-SNAPSHOT</version>")
                     .contains("<tag>HEAD</tag>");
-            softly.assertThat(tags).containsExactly("v1.2.0");
+            softly.assertThat(tags).containsExactly(tag);
         });
-        git.switchToBranch("v1.2.0");
+        git.switchToBranch(tag);
         String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
         SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
                 .contains("<version>1.2.0</version>")
-                .contains("<tag>v1.2.0</tag>"));
+                .contains("<tag>" + tag + "</tag>"));
+    }
+
+    @Test
+    void testCustomTag() throws IOException, InterruptedException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        final String tag = "java-1.9.0";
+
+        // act
+        act(
+                "--development-version", "2.0.0-SNAPSHOT",
+                "--release-version", "1.9.0",
+                "--tag", tag);
+
+        // assert
+        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        List<String> tags = git.tag().lines().toList();
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isZero();
+            softly.assertThat(systemOut.getText()).isEmpty();
+            softly.assertThat(systemErr.getText()).isEmpty();
+            softly.assertThat(pomXmlContents)
+                    .contains("<version>2.0.0-SNAPSHOT</version>")
+                    .contains("<tag>HEAD</tag>");
+            softly.assertThat(tags).containsExactly(tag);
+        });
+        git.switchToBranch(tag);
+        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                .contains("<version>1.9.0</version>")
+                .contains("<tag>" + tag + "</tag>"));
     }
 
     private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
@@ -265,5 +298,12 @@ class AppTest {
             "--release-version", "1.2.0",
             "--directory", directory.toString()
         });
+    }
+
+    private void act(String... args) {
+        List<String> argsAsList = new ArrayList<>(2 + args.length);
+        argsAsList.addAll(List.of("--directory", workingDir.toString()));
+        argsAsList.addAll(List.of(args));
+        exitCode = App.executeWithoutExiting(argsAsList.toArray(String[]::new));
     }
 }
