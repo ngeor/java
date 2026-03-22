@@ -164,6 +164,22 @@ class AppTest {
     }
 
     @Test
+    void testGitTagAlreadyExists() throws InterruptedException, IOException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        git.createTag("v1.2.0", "Releasing version 1.2.0");
+
+        // act
+        act();
+
+        // assert
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText()).contains("Git tag v1.2.0 already exists");
+        });
+    }
+
+    @Test
     void testNotOnDefaultBranch() throws InterruptedException, IOException {
         // arrange
         cloneRepoAndPushInitialCommit();

@@ -103,4 +103,10 @@ public class Git {
     public String tag() throws InterruptedException {
         return processHelper.run("tag");
     }
+
+    public void createTag(String tag, String message) throws InterruptedException {
+        Validate.requireNotBlank(tag, "tag cannot be blank");
+        Validate.requireNotBlank(message, "message cannot be blank");
+        processHelper.runNoOutput("tag", "-m", message, tag);
+    }
 }

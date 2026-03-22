@@ -66,6 +66,7 @@ public final class App implements Callable<Integer> {
                 new StepDefinition("Ensure single git remote", this::validateSingleRemote),
                 new StepDefinition("Get current git branch", this::getCurrentBranch),
                 new StepDefinition("Get default git branch", this::getDefaultBranch),
+                new StepDefinition("Ensure git tag does not exist", this::ensureGitTagDoesNotExist),
                 new StepDefinition("Ensure on default git branch", this::ensureOnDefaultBranch),
                 new StepDefinition("Get latest changes from upstream", git::pull),
                 new StepDefinition("Clean Maven release", maven::releaseClean),
@@ -136,6 +137,12 @@ public final class App implements Callable<Integer> {
 
     private void getDefaultBranch() throws InterruptedException {
         defaultBranch = git.getDefaultBranch(remote);
+    }
+
+    private void ensureGitTagDoesNotExist() throws InterruptedException {
+        if (git.tag().lines().anyMatch(tag::equals)) {
+            throw new IllegalStateException("Git tag " + tag + " already exists");
+        }
     }
 
     private void ensureOnDefaultBranch() throws InterruptedException {
