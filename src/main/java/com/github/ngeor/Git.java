@@ -47,4 +47,8 @@ public class Git extends ProcessHelper {
     public void createAndSwitchToBranch(String branch) throws InterruptedException {
         runNoOutput("checkout", "-b", branch);
     }
+
+    public void switchToBranch(String branch) throws  InterruptedException {
+        runNoOutput("checkout", branch);
+    }
 }

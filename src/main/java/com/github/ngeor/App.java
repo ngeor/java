@@ -1,9 +1,8 @@
 package com.github.ngeor;
 
-import static io.vavr.API.$;
-import static io.vavr.API.Case;
-
 import io.vavr.control.Try;
+
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -49,7 +48,7 @@ public final class App implements Callable<Integer> {
                     .flatMap(ignored -> validateSingleRemote())
                     .flatMap(this::ensureOnDefaultBranch)
                     .get();
-        } catch (ProcessFailException ex) {
+        } catch (AppException ex) {
             System.err.println(ex.getMessage());
             return ex.getCode();
         }
@@ -63,79 +62,79 @@ public final class App implements Callable<Integer> {
         if (directory.toFile().isDirectory()) {
             return;
         }
-        throw new ProcessFailException(1, "Directory " + directory + " does not exist");
+        throw new AppException(1, "Directory " + directory + " does not exist");
     }
 
     private void validatePomXmlExists() {
         if (directory.resolve("pom.xml").toFile().isFile()) {
             return;
         }
-        throw new ProcessFailException(2, "Directory " + directory + " does not contain a pom.xml file");
+        throw new AppException(2, "Directory " + directory + " does not contain a pom.xml file");
     }
 
     private void validateGitDirectoryExists() {
         if (directory.resolve(".git").toFile().isDirectory()) {
             return;
         }
-        throw new ProcessFailException(3, "Directory " + directory + " does not contain a .git directory");
+        throw new AppException(3, "Directory " + directory + " does not contain a .git directory");
     }
 
     private Try<String> validatePendingGitChanges() {
-        return Try.of(() -> git.run("status", "--porcelain"))
-                .mapFailure(
-                        Case($(), e -> new ProcessFailException(4, "Could not check git status: " + e.getMessage())))
+        return wrapFailure(Try.of(() -> git.run("status", "--porcelain")), 4, "Could not check git status")
                 .flatMap(output -> output.isEmpty()
                         ? Try.success(output)
-                        : Try.failure(new ProcessFailException(
+                        : Try.failure(new AppException(
                                 4, "Directory " + directory + " contains pending git changes")));
     }
 
     private Try<String> validateSingleRemote() {
-        return Try.of(() -> git.run("remote"))
-                .mapFailure(
-                        Case($(), e -> new ProcessFailException(5, "Could not check git remotes: " + e.getMessage())))
+        return wrapFailure(Try.of(() -> git.run("remote")), 5, "Could not check git remotes")
                 .flatMap(output -> output.lines().count() == 1
                         ? Try.success(output)
-                        : Try.failure(new ProcessFailException(
+                        : Try.failure(new AppException(
                                 5, "Directory " + directory + " does not have exactly one git remote")));
     }
 
-    private Try<String> ensureOnDefaultBranch(String remote) {
+    private Try<Void> ensureOnDefaultBranch(String remote) {
         return getDefaultBranch(remote)
                 .flatMap(defaultBranch -> getCurrentBranch().flatMap(currentBranch -> {
                     if (!defaultBranch.equals(currentBranch)) {
                         return switchBranch(defaultBranch);
                     }
 
-                    return Try.success("");
+                    return Try.success(null);
                 }));
     }
 
     private Try<String> getDefaultBranch(String remote) {
         String prefix = "refs/remotes/" + remote + "/";
-        return Try.of(() -> git.run("symbolic-ref", prefix + "HEAD"))
-                .mapFailure(
-                        Case($(), e -> new ProcessFailException(6, "Could not get default branch: " + e.getMessage())))
+        return wrapFailure(Try.of(() -> git.run("symbolic-ref", prefix + "HEAD")), 6, "Could not get default branch")
                 .flatMap(fullName -> {
                     if (fullName.startsWith(prefix)) {
                         return Try.success(fullName.substring(prefix.length()));
                     } else {
-                        return Try.failure(new ProcessFailException(6, "Invalid default branch: " + fullName));
+                        return Try.failure(new AppException(6, "Invalid default branch: " + fullName));
                     }
                 });
     }
 
     private Try<String> getCurrentBranch() {
-        return Try.of(git::getCurrentBranch)
-                .mapFailure(
-                        Case($(), e -> new ProcessFailException(7, "Could not get current branch: " + e.getMessage())));
+        return wrapFailure(Try.of(git::getCurrentBranch), 7, "Could not get current branch");
     }
 
-    private Try<String> switchBranch(String branch) {
-        return Try.of(() -> git.run("checkout", branch))
-                .mapFailure(Case(
-                        $(),
-                        e -> new ProcessFailException(
-                                8, "Could not switch to branch " + branch + ": " + e.getMessage())));
+    private Try<Void> switchBranch(String branch) {
+        return wrapFailure(Try.run(() -> git.switchToBranch(branch)), 8, "Could not switch to branch " + branch);
+    }
+
+    private <T> Try<T> wrapFailure(Try<T> t, int code, String message) {
+        if (t.isFailure()) {
+            Throwable cause = t.getCause();
+            if (cause instanceof UncheckedIOException || cause instanceof ProcessFailException) {
+                return Try.failure(new AppException(code, message + ": " + cause.getMessage()));
+            }
+        }
+
+        // leave success and InterruptedException alone
+        return t;
     }
 }
