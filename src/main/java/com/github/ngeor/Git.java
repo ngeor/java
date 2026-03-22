@@ -40,6 +40,10 @@ public class Git {
         processHelper.runNoOutput("push");
     }
 
+    public void pushFollowTags() throws InterruptedException {
+        processHelper.runNoOutput("push", "--follow-tags");
+    }
+
     public void commit(String message) throws InterruptedException {
         Validate.requireNotBlank(message, "message cannot be blank");
         processHelper.runNoOutput("commit", "-m", message);

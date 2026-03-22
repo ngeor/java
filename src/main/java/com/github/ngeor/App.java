@@ -60,7 +60,10 @@ public final class App implements Callable<Integer> {
                 this::ensureOnDefaultBranch,
                 git::pull,
                 maven::releaseClean,
-                this::prepareRelease);
+                this::prepareRelease,
+                this::runGitCliff,
+                git::pushFollowTags,
+                maven::releaseClean);
 
         List<String> stepNames = List.of(
                 "Check if directory exists",
@@ -73,7 +76,10 @@ public final class App implements Callable<Integer> {
                 "Ensure on default git branch",
                 "Get latest changes from upstream",
                 "Clean Maven release",
-                "Prepare Maven release");
+                "Prepare Maven release",
+                "Run git-cliff",
+                "Push upstream",
+                "Final Maven release:clean");
 
         int stepNumber = 1;
         try {
@@ -153,5 +159,12 @@ public final class App implements Callable<Integer> {
     private void prepareRelease() throws InterruptedException {
         String tag = "v" + releaseVersion;
         maven.releasePrepare(developmentVersion, releaseVersion, tag);
+    }
+
+    private void runGitCliff() throws InterruptedException {
+        ProcessHelper gitCliff = new ProcessHelper("git-cliff", directory.toFile());
+        gitCliff.runNoOutput("-o", "CHANGELOG.md");
+        git.add("CHANGELOG.md");
+        git.commit("Updated changelog");
     }
 }
