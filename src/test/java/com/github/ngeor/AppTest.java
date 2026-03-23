@@ -2,14 +2,12 @@ package com.github.ngeor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.UnaryOperator;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,7 +67,7 @@ class AppTest {
             })
     void testNonSemVerOrNonSnapshotDevelopmentVersion(String developmentVersion) {
         // act
-        act("--release-version", "1.2.3", "--development-version", developmentVersion);
+        act(builder -> builder.releaseVersion("1.2.3").developmentVersion(developmentVersion));
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
@@ -95,7 +93,7 @@ class AppTest {
             })
     void testNonSemVerOrSnapshotReleaseVersion(String releaseVersion) {
         // act
-        act("--release-version", releaseVersion, "--development-version", "2.0.0-SNAPSHOT");
+        act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("2.0.0-SNAPSHOT"));
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
@@ -107,7 +105,7 @@ class AppTest {
     @ValueSource(strings = {"1.2.3", "1.2.4", "1.3.0", "2.0.0"})
     void testDevelopmentVersionMustBeGreaterThanReleaseVersion(String releaseVersion) {
         // act
-        act("--release-version", releaseVersion, "--development-version", "1.2.3-SNAPSHOT");
+        act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("1.2.3-SNAPSHOT"));
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();
@@ -332,10 +330,9 @@ class AppTest {
         final String tag = "java-1.9.0";
 
         // act
-        act(
-                "--development-version", "2.0.0-SNAPSHOT",
-                "--release-version", "1.9.0",
-                "--tag", tag);
+        act(builder -> builder.developmentVersion("2.0.0-SNAPSHOT")
+                .releaseVersion("1.9.0")
+                .tag(tag));
 
         // assert
         String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
@@ -360,17 +357,11 @@ class AppTest {
         String remotePath = remoteDir.toAbsolutePath().toString();
         git.clone(remotePath);
         git.configure("Dummy User", "dummy@user.com");
-        try (InputStream inputStream = getClass().getResourceAsStream("/sample_pom.xml")) {
-            assertThat(inputStream).isNotNull();
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            inputStream.transferTo(byteArrayOutputStream);
-            String contents =
-                    byteArrayOutputStream.toString(StandardCharsets.UTF_8).replaceAll("\\$REMOTE", remotePath);
-            assertThat(contents).contains(remotePath);
-            Files.writeString(workingDir.resolve("pom.xml"), contents);
-        }
-        Files.writeString(workingDir.resolve(".gitignore"), "target/");
+        String contents = IOUtil.readResource("/sample_pom.xml").replaceAll("\\$REMOTE", remotePath);
+        assertThat(contents).contains(remotePath);
+        Files.writeString(workingDir.resolve("pom.xml"), contents);
         git.add("pom.xml");
+        Files.writeString(workingDir.resolve(".gitignore"), "target/");
         git.add(".gitignore");
         git.commit("feat: Initial commit");
         // a push is needed to mark the default branch
@@ -379,21 +370,24 @@ class AppTest {
     }
 
     private void act() {
-        act(workingDir);
+        act(UnaryOperator.identity());
     }
 
     private void act(Path directory) {
-        exitCode = App.executeWithoutExiting(new String[] {
-            "--development-version", "1.2.1-SNAPSHOT",
-            "--release-version", "1.2.0",
-            "--directory", directory.toString()
-        });
+        act(builder -> builder.directory(directory.toString()));
     }
 
-    private void act(String... args) {
-        List<String> argsAsList = new ArrayList<>(2 + args.length);
-        argsAsList.addAll(List.of("--directory", workingDir.toString()));
-        argsAsList.addAll(List.of(args));
-        exitCode = App.executeWithoutExiting(argsAsList.toArray(String[]::new));
+    private void act(UnaryOperator<AppOptionsBuilder> customizer) {
+        AppOptions options = customizer
+                .apply(new AppOptionsBuilder()
+                        .directory(workingDir.toString())
+                        .developmentVersion("1.2.1-SNAPSHOT")
+                        .releaseVersion("1.2.0"))
+                .build();
+        List<String> args = new ArrayList<>(List.of("--directory", options.directory()));
+        options.developmentVersion().ifPresent(s -> args.addAll(List.of("--development-version", s)));
+        options.releaseVersion().ifPresent(s -> args.addAll(List.of("--release-version", s)));
+        options.tag().ifPresent(s -> args.addAll(List.of("--tag", s)));
+        exitCode = App.executeWithoutExiting(args.toArray(String[]::new));
     }
 }
