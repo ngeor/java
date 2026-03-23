@@ -96,23 +96,28 @@ public final class App implements Callable<Integer> {
     }
 
     private void validateSemVer() {
-        SemVer semVer;
+        final SemVer releaseSemVer;
         try {
-            semVer = SemVer.parse(releaseVersion);
+            releaseSemVer = SemVer.parse(releaseVersion);
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Invalid release version: " + releaseVersion, ex);
         }
-        if (semVer.suffix() != null) {
+        if (releaseSemVer.suffix() != null) {
             throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
         }
 
+        final SemVer developmentSemVer;
         try {
-            semVer = SemVer.parse(developmentVersion);
+            developmentSemVer = SemVer.parse(developmentVersion);
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Invalid development version: " + developmentVersion, ex);
         }
-        if (!"SNAPSHOT".equals(semVer.suffix())) {
+        if (!"SNAPSHOT".equals(developmentSemVer.suffix())) {
             throw new IllegalArgumentException("Invalid development version: " + developmentVersion);
+        }
+
+        if (developmentSemVer.compareTo(releaseSemVer) <= 0) {
+            throw new IllegalArgumentException("Development version must be greater than release version");
         }
     }
 

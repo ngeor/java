@@ -91,20 +91,17 @@ class SemVerTest {
         @ParameterizedTest
         @ValueSource(strings = {"", " "})
         void invalid(String version) {
-            assertThatThrownBy(() -> SemVer.parse(version))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> SemVer.parse(version)).isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         void invalidFormat() {
-            assertThatThrownBy(() -> SemVer.parse("1.2"))
-                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> SemVer.parse("1.2")).isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         void invalidNumber() {
-            assertThatThrownBy(() -> SemVer.parse("a.b.c"))
-                    .isInstanceOf(NumberFormatException.class);
+            assertThatThrownBy(() -> SemVer.parse("a.b.c")).isInstanceOf(NumberFormatException.class);
         }
     }
 

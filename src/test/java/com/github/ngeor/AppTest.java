@@ -103,6 +103,18 @@ class AppTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"1.2.3", "1.2.4", "1.3.0", "2.0.0"})
+    void testDevelopmentVersionMustBeGreaterThanReleaseVersion(String releaseVersion) {
+        // act
+        act("--release-version", releaseVersion, "--development-version", "1.2.3-SNAPSHOT");
+        // assert
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText()).contains("Development version must be greater than release version");
+        });
+    }
+
     @Test
     void testDirectoryDoesNotExist() {
         // act
