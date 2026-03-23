@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 import uk.org.webcompere.systemstubs.stream.SystemErr;
@@ -46,6 +48,33 @@ class AppTest {
         git = new Git(workingDir.toFile());
         Git remoteGit = new Git(remoteDir.toFile());
         remoteGit.initBare("master");
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "",
+                ".",
+                "1",
+                "1.",
+                "1.2",
+                "1..2",
+                "1..2.3",
+                "1.2.3.4",
+                "1.2.3.abc",
+                "...",
+                "1.2.3-SNAPSHOT",
+                "1.2.3-"
+            })
+    void testNonSemVerOrSnapshotReleaseVersion(String releaseVersion) {
+        // act
+        act("--release-version", releaseVersion, "--development-version", "2.0.0-SNAPSHOT");
+
+        // assert
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText()).contains("Invalid release version: " + releaseVersion);
+        });
     }
 
     @Test
@@ -84,7 +113,7 @@ class AppTest {
 
         // assert
         SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isEqualTo(3);
+            softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
                     .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a .git directory");
         });
@@ -101,7 +130,7 @@ class AppTest {
 
         // assert
         SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isEqualTo(4);
+            softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText())
                     .contains("Ensure no pending git changes")
                     .contains("not a git repository");

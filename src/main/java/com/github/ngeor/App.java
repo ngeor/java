@@ -59,6 +59,7 @@ public final class App implements Callable<Integer> {
         }
 
         List<StepDefinition> steps = List.of(
+                new StepDefinition("Validate SemVer", this::validateSemVer),
                 new StepDefinition("Check if directory exists", this::validateDirectoryExists),
                 new StepDefinition("Check if pom.xml exists", this::validatePomXmlExists),
                 new StepDefinition("Check if directory is a git working directory", this::validateGitDirectoryExists),
@@ -92,6 +93,18 @@ public final class App implements Callable<Integer> {
         }
 
         return 0;
+    }
+
+    private void validateSemVer() {
+        SemVer semVer;
+        try {
+            semVer = SemVer.parse(releaseVersion);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid release version: " + releaseVersion, ex);
+        }
+        if (semVer.suffix() != null) {
+            throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
+        }
     }
 
     private void validateDirectoryExists() {
