@@ -1,6 +1,6 @@
 package com.github.ngeor;
 
-public record SemVer(int major, int minor, int patch, String suffix) {
+public record SemVer(int major, int minor, int patch, String suffix) implements Comparable<SemVer> {
     public SemVer {
         if (major < 0) {
             throw new IllegalArgumentException("Major version cannot be negative");
@@ -24,6 +24,29 @@ public record SemVer(int major, int minor, int patch, String suffix) {
         } else {
             return major + "." + minor + "." + patch;
         }
+    }
+
+    @Override
+    public int compareTo(SemVer other) {
+        if (major != other.major) {
+            return Integer.compare(major, other.major);
+        }
+        if (minor != other.minor) {
+            return Integer.compare(minor, other.minor);
+        }
+        if (patch != other.patch) {
+            return Integer.compare(patch, other.patch);
+        }
+        if (suffix == null && other.suffix == null) {
+            return 0;
+        }
+        if (suffix == null) {
+            return 1;
+        }
+        if (other.suffix == null) {
+            return -1;
+        }
+        return suffix.compareTo(other.suffix);
     }
 
     public static SemVer parse(String version) {

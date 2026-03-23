@@ -107,4 +107,56 @@ class SemVerTest {
                     .isInstanceOf(NumberFormatException.class);
         }
     }
+
+    @Nested
+    class CompareToTest {
+        @Test
+        void equal() {
+            SemVer v1 = new SemVer(1, 2, 3, "suffix");
+            SemVer v2 = new SemVer(1, 2, 3, "suffix");
+            assertThat(v1).isEqualByComparingTo(v2);
+        }
+
+        @Test
+        void majorDifference() {
+            SemVer v1 = new SemVer(1, 2, 3, null);
+            SemVer v2 = new SemVer(2, 2, 3, null);
+            assertThat(v1).isLessThan(v2);
+        }
+
+        @Test
+        void minorDifference() {
+            SemVer v1 = new SemVer(1, 2, 3, null);
+            SemVer v2 = new SemVer(1, 3, 3, null);
+            assertThat(v1).isLessThan(v2);
+        }
+
+        @Test
+        void patchDifference() {
+            SemVer v1 = new SemVer(1, 2, 3, null);
+            SemVer v2 = new SemVer(1, 2, 4, null);
+            assertThat(v1).isLessThan(v2);
+        }
+
+        @Test
+        void suffixDifference() {
+            SemVer v1 = new SemVer(1, 2, 3, "alpha");
+            SemVer v2 = new SemVer(1, 2, 3, "beta");
+            assertThat(v1).isLessThan(v2);
+        }
+
+        @Test
+        void nullSuffixIsGreater() {
+            SemVer v1 = new SemVer(1, 2, 3, "beta");
+            SemVer v2 = new SemVer(1, 2, 3, null);
+            assertThat(v1).isLessThan(v2);
+        }
+
+        @Test
+        void bothNullSuffix() {
+            SemVer v1 = new SemVer(1, 2, 3, null);
+            SemVer v2 = new SemVer(1, 2, 3, null);
+            assertThat(v1).isEqualByComparingTo(v2);
+        }
+    }
 }
