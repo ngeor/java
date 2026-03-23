@@ -178,14 +178,20 @@ public final class App implements Callable<Integer> {
         }
     }
 
-    private void prepareRelease() throws InterruptedException {
-        maven.releasePrepare(developmentVersion, releaseVersion, tag);
-    }
-
     private void runGitCliff() throws InterruptedException {
         ProcessHelper gitCliff = new ProcessHelper("git-cliff", directory.toFile());
         gitCliff.runNoOutput("-o", "CHANGELOG.md", "-t", tag);
         // add it to git but don't commit, that will be done by maven release prepare
         git.add("CHANGELOG.md");
+    }
+
+    private void prepareRelease() throws InterruptedException {
+        maven.releasePrepare(new MavenPrepareOptionsBuilder()
+                .developmentVersion(developmentVersion)
+                .releaseVersion(releaseVersion)
+                .tag(tag)
+                // git-cliff has modified it so ignore that it is modified
+                .checkModificationExcludeList("CHANGELOG.md")
+                .build());
     }
 }

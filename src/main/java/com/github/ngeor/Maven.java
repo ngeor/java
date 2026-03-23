@@ -7,19 +7,20 @@ public class Maven {
         processHelper = new ProcessHelper("mvn", directory);
     }
 
-    public void releasePrepare(String developmentVersion, String releaseVersion, String tag)
-            throws InterruptedException {
-        Validate.requireNotBlank(developmentVersion, "developmentVersion cannot be blank");
-        Validate.requireNotBlank(releaseVersion, "releaseVersion cannot be blank");
-        Validate.requireNotBlank(tag, "tag cannot be blank");
+    public void releasePrepare(MavenPrepareOptions options) throws InterruptedException {
+        Validate.requireNotBlank(options.developmentVersion(), "developmentVersion cannot be blank");
+        Validate.requireNotBlank(options.releaseVersion(), "releaseVersion cannot be blank");
+        Validate.requireNotBlank(options.tag(), "tag cannot be blank");
         processHelper.runNoOutput(
                 "-B",
-                "-DdevelopmentVersion=" + developmentVersion,
-                "-DreleaseVersion=" + releaseVersion,
-                "-Dtag=" + tag,
-                "-DpushChanges=false",
-                "-DcompletionGoals=validate",
-                "-DcheckModificationExcludeList=CHANGELOG.md",
+                "-DdevelopmentVersion=" + options.developmentVersion(),
+                "-DreleaseVersion=" + options.releaseVersion(),
+                "-Dtag=" + options.tag(),
+                "-DpushChanges=" + options.pushChanges(),
+                "-DcompletionGoals=" + options.completionGoals(),
+                options.checkModificationExcludeList()
+                        .map(s -> "-DcheckModificationExcludeList=" + s)
+                        .orElse(""),
                 "release:prepare");
     }
 
