@@ -15,10 +15,21 @@ jobs:
         distribution: 'zulu'
         cache: 'maven'
     - run: cargo install git-cliff
-    - run: >-
-        ./scripts/release.py
-        --gpg-key-file ./scripts/keys.asc
-        --gpg-key-name ${{ secrets.GPG_KEY }}
-        --gpg-passphrase ${{ secrets.GPG_PASSPHRASE }}
-        --maven-username ${{ secrets.OSSRH_USERNAME }}
-        --maven-password ${{ secrets.OSSRH_PASSWORD }}
+    - run: mvn -B -ntp package --file pom.xml
+    - uses: actions/upload-artifact@v4
+      with:
+        name: jar-artifact
+        path: target/java-*.jar
+  create-draft-github-release:
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: jar-artifact
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: |
+            java-*.jar

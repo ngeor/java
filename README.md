@@ -1,27 +1,15 @@
 # java
 
-**This repo is being repurposed. It will not be used as a parent pom.**
-**It will be used as a release helper for Java projects.**
-
-[![Maven Central](https://img.shields.io/maven-central/v/com.github.ngeor/java.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/com.github.ngeor/java)
  [![build](https://github.com/ngeor/java/actions/workflows/build.yml/badge.svg)](https://github.com/ngeor/java/actions/workflows/build.yml)
 
-Parent pom for Java projects
+A CLI that releases Java libraries.
 
-The goal of the project is to configure Maven plugins in a standard way.
-Dependency management is out of scope.
+Essentially a wrapper around `mvn release:prepare`, but also takes care of
+generating the changelog with `git-cliff`.
 
-## Releasing
+Additional points:
 
-- Make sure you're on the default branch and there are no pending changes
-- Push a tag in the naming convention `vx.y.z`
-
-e.g.
-
-```sh
-mvn release:clean
-mvn -DtagNameFormat='v@{project.version}' release:prepare
-// alternatively to not push changes and also format the pom.xml again
-mvn -DtagNameFormat='v@{project.version}' -DpushChanges=false -DcompletionGoals=validate release:prepare
-mvn release:clean
-```
+- Ensures the code is on the latest version and the master branch
+- Ensures the tag doesn't already exist
+- Validates the given versions are SemVer
+- Non-interactive
