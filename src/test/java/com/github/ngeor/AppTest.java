@@ -63,13 +63,39 @@ class AppTest {
                 "1.2.3.4",
                 "1.2.3.abc",
                 "...",
+                "1.2.3",
+                "1.2.3-",
+                "1.2.3-FIX"
+            })
+    void testNonSemVerOrNonSnapshotDevelopmentVersion(String developmentVersion) {
+        // act
+        act("--release-version", "1.2.3", "--development-version", developmentVersion);
+        // assert
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText()).contains("Invalid development version: " + developmentVersion);
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "",
+                ".",
+                "1",
+                "1.",
+                "1.2",
+                "1..2",
+                "1..2.3",
+                "1.2.3.4",
+                "1.2.3.abc",
+                "...",
                 "1.2.3-SNAPSHOT",
                 "1.2.3-"
             })
     void testNonSemVerOrSnapshotReleaseVersion(String releaseVersion) {
         // act
         act("--release-version", releaseVersion, "--development-version", "2.0.0-SNAPSHOT");
-
         // assert
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isNotZero();

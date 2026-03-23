@@ -105,6 +105,15 @@ public final class App implements Callable<Integer> {
         if (semVer.suffix() != null) {
             throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
         }
+
+        try {
+            semVer = SemVer.parse(developmentVersion);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid development version: " + developmentVersion, ex);
+        }
+        if (!"SNAPSHOT".equals(semVer.suffix())) {
+            throw new IllegalArgumentException("Invalid development version: " + developmentVersion);
+        }
     }
 
     private void validateDirectoryExists() {
