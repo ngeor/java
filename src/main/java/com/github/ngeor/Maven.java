@@ -19,6 +19,7 @@ public class Maven {
                 "-Dtag=" + tag,
                 "-DpushChanges=false",
                 "-DcompletionGoals=validate",
+                "-DcheckModificationExcludeList=CHANGELOG.md",
                 "release:prepare");
     }
 

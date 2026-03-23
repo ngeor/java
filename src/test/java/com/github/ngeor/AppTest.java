@@ -313,11 +313,16 @@ class AppTest {
                     .contains("<tag>HEAD</tag>");
             softly.assertThat(tags).containsExactly(tag);
         });
+        assertThat(git.statusPorcelain())
+                .as("Should not have any pending changes")
+                .isEmpty();
         git.switchToBranch(tag);
         String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
         SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
                 .contains("<version>1.2.0</version>")
                 .contains("<tag>" + tag + "</tag>"));
+        String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
+        assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
     }
 
     @Test
@@ -364,8 +369,10 @@ class AppTest {
             assertThat(contents).contains(remotePath);
             Files.writeString(workingDir.resolve("pom.xml"), contents);
         }
+        Files.writeString(workingDir.resolve(".gitignore"), "target/");
         git.add("pom.xml");
-        git.commit("Initial commit");
+        git.add(".gitignore");
+        git.commit("feat: Initial commit");
         // a push is needed to mark the default branch
         git.push();
         git.setRemoteHead("origin", "master");

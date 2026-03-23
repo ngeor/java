@@ -71,8 +71,8 @@ public final class App implements Callable<Integer> {
                 new StepDefinition("Ensure on default git branch", this::ensureOnDefaultBranch),
                 new StepDefinition("Get latest changes from upstream", git::pull),
                 new StepDefinition("Clean Maven release", maven::releaseClean),
-                new StepDefinition("Prepare Maven release", this::prepareRelease),
                 new StepDefinition("Run git-cliff", this::runGitCliff),
+                new StepDefinition("Prepare Maven release", this::prepareRelease),
                 new StepDefinition("Push upstream", git::pushFollowTags),
                 new StepDefinition("Final Maven release:clean", maven::releaseClean));
 
@@ -184,8 +184,8 @@ public final class App implements Callable<Integer> {
 
     private void runGitCliff() throws InterruptedException {
         ProcessHelper gitCliff = new ProcessHelper("git-cliff", directory.toFile());
-        gitCliff.runNoOutput("-o", "CHANGELOG.md");
+        gitCliff.runNoOutput("-o", "CHANGELOG.md", "-t", tag);
+        // add it to git but don't commit, that will be done by maven release prepare
         git.add("CHANGELOG.md");
-        git.commit("Updated changelog");
     }
 }
