@@ -34,7 +34,7 @@ public final class DeployApp implements Callable<Integer> {
     @Option(names = "--maven-username", description = "The Central Maven username", required = true)
     private String mavenUsername;
 
-    @Option(names = "---maven-password", description = "The Central Maven password", required = true)
+    @Option(names = "--maven-password", description = "The Central Maven password", required = true)
     private String mavenPassword;
 
     private Maven maven;
