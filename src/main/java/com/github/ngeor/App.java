@@ -13,9 +13,6 @@ import picocli.CommandLine.Option;
  */
 @Command(name = "app", mixinStandardHelpOptions = true, version = "1.0", description = "Releases a Java library")
 public final class App implements Callable<Integer> {
-    @Option(names = "--dry-run", description = "Dry run, do not perform any changes")
-    private boolean dryRun;
-
     @Option(names = "--directory", description = "The working directory", defaultValue = ".")
     private Path directory;
 
@@ -27,7 +24,7 @@ public final class App implements Callable<Integer> {
 
     @Option(
             names = "--tag",
-            description = "Override the git tag for the release (defaults to v plus the release version")
+            description = "Override the git tag for the release (defaults to v plus the release version)")
     private String tag;
 
     private Git git;
