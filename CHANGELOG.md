@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.2] - 2026-03-25
+
+### 🐛 Bug Fixes
+
+- Removed incorrect cli argument
+
 ## [5.1.1] - 2026-03-25
 
 ### 🐛 Bug Fixes
