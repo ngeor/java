@@ -73,23 +73,7 @@ public final class App implements Callable<Integer> {
                 new StepDefinition("Push upstream", git::pushFollowTags),
                 new StepDefinition("Final Maven release:clean", maven::releaseClean));
 
-        int stepNumber = 0;
-        for (StepDefinition stepDefinition : steps) {
-            try {
-                stepNumber++;
-                stepDefinition.step().run();
-            } catch (ProcessFailException ex) {
-                System.err.printf(
-                        "[%s] Child process exited with code %d : %s%n",
-                        stepDefinition.name(), ex.getCode(), ex.getMessage());
-                return stepNumber;
-            } catch (RuntimeException ex) {
-                System.err.printf("[%s] %s%n", stepDefinition.name(), ex.getMessage());
-                return stepNumber;
-            }
-        }
-
-        return 0;
+        return AppUtil.runSteps(steps);
     }
 
     private void validateSemVer() {

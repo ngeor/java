@@ -38,12 +38,15 @@ public class ProcessHelper {
         runInternal(ignored -> null, args);
     }
 
-    private <T> T runInternal(Function<Process, T> onSuccess, String... args) throws InterruptedException {
+    public ProcessBuilder createProcessBuilder(String... args) {
         List<String> command = new ArrayList<>(1 + args.length);
         command.add(this.command);
         command.addAll(List.of(args));
+        return new ProcessBuilder().command(command).directory(directory);
+    }
 
-        ProcessBuilder processBuilder = new ProcessBuilder().command(command).directory(directory);
+    private <T> T runInternal(Function<Process, T> onSuccess, String... args) throws InterruptedException {
+        ProcessBuilder processBuilder = createProcessBuilder(args);
         Process process;
         try {
             process = processBuilder.start();
