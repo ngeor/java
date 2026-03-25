@@ -36,7 +36,7 @@ public class Maven {
     }
 
     public void deploy(Map<String, String> env, String... args) throws InterruptedException {
-        List<String> argsAsList = new ArrayList<>(List.of("-B", "-ntp", "-s"));
+        List<String> argsAsList = new ArrayList<>(List.of("-B", "-ntp"));
         argsAsList.addAll(Arrays.asList(args));
         argsAsList.add("deploy");
         ProcessBuilder pb = processHelper
