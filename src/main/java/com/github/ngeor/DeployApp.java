@@ -70,9 +70,8 @@ public final class DeployApp implements Callable<Integer> {
                 new StepDefinition("Deploy", this::deploy));
 
         List<StepDefinition> tearDownSteps = List.of(
-            new StepDefinition("Remove temp directory", this::removeTempDirectory),
-            new StepDefinition("Remove GPG directory", this::removeGnuGpgDirectory)
-        );
+                new StepDefinition("Remove temp directory", this::removeTempDirectory),
+                new StepDefinition("Remove GPG directory", this::removeGpgDirectory));
 
         Pipeline pipeline = new Pipeline(steps, tearDownSteps);
         return pipeline.call();
@@ -150,12 +149,12 @@ public final class DeployApp implements Callable<Integer> {
         }
     }
 
-    private void removeGnuGpgDirectory() {
+    private void removeGpgDirectory() {
         String userHome = System.getProperty("user.home");
         if (userHome == null || userHome.isBlank()) {
             return;
         }
-        Path userHomePath = Path.of(userHome, ".gnugpg");
-        IOUtil.deleteRecursively(userHomePath.toFile());
+        Path gpgPath = Path.of(userHome, ".gnupg");
+        IOUtil.deleteRecursively(gpgPath.toFile());
     }
 }
