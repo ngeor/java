@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +48,6 @@ class AppTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "",
                 ".",
                 "1",
                 "1.",
@@ -302,6 +302,38 @@ class AppTest {
             softly.assertThat(systemErr.getText()).isEmpty();
             softly.assertThat(pomXmlContents)
                     .contains("<version>1.2.1-SNAPSHOT</version>")
+                    .contains("<tag>HEAD</tag>");
+            softly.assertThat(tags).containsExactly(tag);
+        });
+        assertThat(git.statusPorcelain())
+                .as("Should not have any pending changes")
+                .isEmpty();
+        git.switchToBranch(tag);
+        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                .contains("<version>1.2.0</version>")
+                .contains("<tag>" + tag + "</tag>"));
+        String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
+        assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
+    }
+
+    @Test
+    void testOptionalDevelopmentVersion() throws IOException, InterruptedException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        final String tag = "v1.2.0";
+
+        // act
+        act(builder -> builder.developmentVersion(Optional.empty()));
+
+        // assert
+        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+        List<String> tags = git.tag().lines().toList();
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isZero();
+            softly.assertThat(systemErr.getText()).isEmpty();
+            softly.assertThat(pomXmlContents)
+                    .contains("<version>1.3.0-SNAPSHOT</version>")
                     .contains("<tag>HEAD</tag>");
             softly.assertThat(tags).containsExactly(tag);
         });

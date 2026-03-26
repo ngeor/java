@@ -16,7 +16,10 @@ public final class App implements Callable<Integer> {
     @Option(names = "--directory", description = "The working directory", defaultValue = ".")
     private Path directory;
 
-    @Option(names = "--development-version", description = "The next development version", required = true)
+    @Option(
+            names = "--development-version",
+            description =
+                    "The next development version (defaults to the next minor version after the given release version)")
     private String developmentVersion;
 
     @Option(names = "--release-version", description = "The release version", required = true)
@@ -88,6 +91,11 @@ public final class App implements Callable<Integer> {
         }
 
         final SemVer developmentSemVer;
+
+        if (developmentVersion == null || developmentVersion.isBlank()) {
+            developmentVersion = new SemVer(releaseSemVer.major(), releaseSemVer.minor() + 1, 0, "SNAPSHOT").toString();
+        }
+
         try {
             developmentSemVer = SemVer.parse(developmentVersion);
         } catch (IllegalArgumentException ex) {
