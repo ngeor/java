@@ -31,6 +31,8 @@ public final class IOUtil {
             }
         }
         System.out.printf("Deleting %s%n", path);
-        path.delete();
+        if (!path.delete()) {
+            System.err.printf("Could not delete %s%n", path);
+        }
     }
 }

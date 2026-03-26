@@ -69,12 +69,13 @@ public final class DeployApp implements Callable<Integer> {
                 new StepDefinition("Write temp Maven settings", this::writeTempMavenSettings),
                 new StepDefinition("Deploy", this::deploy));
 
-        try {
-            return AppUtil.runSteps(steps);
-        } finally {
-            removeTempDirectory();
-            removeGnuGpgDirectory();
-        }
+        List<StepDefinition> tearDownSteps = List.of(
+            new StepDefinition("Remove temp directory", this::removeTempDirectory),
+            new StepDefinition("Remove GPG directory", this::removeGnuGpgDirectory)
+        );
+
+        Pipeline pipeline = new Pipeline(steps, tearDownSteps);
+        return pipeline.call();
     }
 
     private void createTempDirectory() {

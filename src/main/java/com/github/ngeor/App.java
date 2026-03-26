@@ -76,7 +76,8 @@ public final class App implements Callable<Integer> {
                 new StepDefinition("Push upstream", git::pushFollowTags),
                 new StepDefinition("Final Maven release:clean", maven::releaseClean));
 
-        return AppUtil.runSteps(steps);
+        Pipeline pipeline = new Pipeline(steps, List.of());
+        return pipeline.call();
     }
 
     private void validateSemVer() {
