@@ -150,10 +150,14 @@
               <version>${palantir-java-format.version}</version>
               <style>PALANTIR</style>
             </palantirJavaFormat>
-            <removeUnusedImports />
+            <removeUnusedImports/>
           </java>
           <pom>
-            <sortPom />
+            <sortPom>
+              <expandEmptyElements>false</expandEmptyElements>
+              <sortProperties>true</sortProperties>
+              <sortDependencies>scope</sortDependencies>
+            </sortPom>
           </pom>
         </configuration>
       </plugin>
