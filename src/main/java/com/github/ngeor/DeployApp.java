@@ -73,6 +73,7 @@ public final class DeployApp implements Callable<Integer> {
             return AppUtil.runSteps(steps);
         } finally {
             removeTempDirectory();
+            removeGnuGpgDirectory();
         }
     }
 
@@ -146,5 +147,14 @@ public final class DeployApp implements Callable<Integer> {
         if (tempDirectory != null) {
             IOUtil.deleteRecursively(tempDirectory.toFile());
         }
+    }
+
+    private void removeGnuGpgDirectory() {
+        String userHome = System.getProperty("user.home");
+        if (userHome == null || userHome.isBlank()) {
+            return;
+        }
+        Path userHomePath = Path.of(userHome, ".gnugpg");
+        IOUtil.deleteRecursively(userHomePath.toFile());
     }
 }
