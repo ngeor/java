@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.3.1] - 2026-03-26
+
+### 🐛 Bug Fixes
+
+- Incorrect path for gpg
+
 ## [5.3.0] - 2026-03-26
 
 ### 🚜 Refactor
