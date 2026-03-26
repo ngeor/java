@@ -9,18 +9,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class ProcessHelper {
-    private final String command;
+    private final List<String> command;
     private final File directory;
 
-    public ProcessHelper(String command, File directory) {
-        this.command = Objects.requireNonNull(command);
+    public ProcessHelper(File directory, String... command) {
+        this.command = List.of(command);
         this.directory = Objects.requireNonNull(directory);
     }
 
     public String run(String... args) throws InterruptedException {
         return runInternal(
+                UnaryOperator.identity(),
                 process -> {
                     String stdOut;
                     try {
@@ -34,19 +36,24 @@ public class ProcessHelper {
                 args);
     }
 
+    public void runNoOutput(UnaryOperator<ProcessBuilder> customizer, String... args) throws InterruptedException {
+        runInternal(customizer, ignored -> null, args);
+    }
+
     public void runNoOutput(String... args) throws InterruptedException {
-        runInternal(ignored -> null, args);
+        runNoOutput(UnaryOperator.identity(), args);
     }
 
     public ProcessBuilder createProcessBuilder(String... args) {
-        List<String> command = new ArrayList<>(1 + args.length);
-        command.add(this.command);
+        List<String> command = new ArrayList<>(this.command.size() + args.length);
+        command.addAll(this.command);
         command.addAll(List.of(args));
         return new ProcessBuilder().command(command).directory(directory);
     }
 
-    private <T> T runInternal(Function<Process, T> onSuccess, String... args) throws InterruptedException {
-        ProcessBuilder processBuilder = createProcessBuilder(args);
+    private <T> T runInternal(UnaryOperator<ProcessBuilder> customizer, Function<Process, T> onSuccess, String... args)
+            throws InterruptedException {
+        ProcessBuilder processBuilder = customizer.apply(createProcessBuilder(args));
         Process process;
         try {
             process = processBuilder.start();

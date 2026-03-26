@@ -160,7 +160,7 @@ public final class App implements Callable<Integer> {
     }
 
     private void runGitCliff() throws InterruptedException {
-        ProcessHelper gitCliff = new ProcessHelper("git-cliff", directory.toFile());
+        ProcessHelper gitCliff = new ProcessHelper(directory.toFile(), "git-cliff");
         gitCliff.runNoOutput("-o", "CHANGELOG.md", "-t", tag);
         // add it to git but don't commit, that will be done by maven release prepare
         git.add("CHANGELOG.md");

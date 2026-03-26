@@ -9,7 +9,7 @@ public class Gpg {
     private final ProcessHelper processHelper;
 
     public Gpg(File directory) {
-        this.processHelper = new ProcessHelper("gpg", directory);
+        this.processHelper = new ProcessHelper(directory, "gpg");
     }
 
     public void listKeys() throws InterruptedException {

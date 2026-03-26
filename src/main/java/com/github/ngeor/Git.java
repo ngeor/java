@@ -6,7 +6,7 @@ public class Git {
     private final ProcessHelper processHelper;
 
     public Git(File directory) {
-        processHelper = new ProcessHelper("git", directory);
+        processHelper = new ProcessHelper(directory, "git");
     }
 
     public void clone(String url) throws InterruptedException {

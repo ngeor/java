@@ -11,7 +11,7 @@ public class Maven {
     private final ProcessHelper processHelper;
 
     public Maven(java.io.File directory) {
-        processHelper = new ProcessHelper("mvn", directory);
+        processHelper = new ProcessHelper(directory, "mvn", "-B");
     }
 
     public void releasePrepare(MavenPrepareOptions options) throws InterruptedException {
@@ -19,7 +19,7 @@ public class Maven {
         Validate.requireNotBlank(options.releaseVersion(), "releaseVersion cannot be blank");
         Validate.requireNotBlank(options.tag(), "tag cannot be blank");
         processHelper.runNoOutput(
-                "-B",
+                ProcessBuilder::inheritIO,
                 "-DdevelopmentVersion=" + options.developmentVersion(),
                 "-DreleaseVersion=" + options.releaseVersion(),
                 "-Dtag=" + options.tag(),
@@ -32,11 +32,11 @@ public class Maven {
     }
 
     public void releaseClean() throws InterruptedException {
-        processHelper.runNoOutput("-B", "release:clean");
+        processHelper.runNoOutput("release:clean");
     }
 
     public void deploy(Map<String, String> env, String... args) throws InterruptedException {
-        List<String> argsAsList = new ArrayList<>(List.of("-B", "-ntp"));
+        List<String> argsAsList = new ArrayList<>(List.of("-ntp"));
         argsAsList.addAll(Arrays.asList(args));
         argsAsList.add("deploy");
         ProcessBuilder pb = processHelper
