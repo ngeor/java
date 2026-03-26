@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.3.0] - 2026-03-26
+
+### 🚜 Refactor
+
+- Implement Pipeline to handle teardown steps
+
 ## [5.2.0] - 2026-03-26
 
 ### 🚀 Features
