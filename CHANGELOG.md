@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.2.0] - 2026-03-26
+
+### 🚀 Features
+
+- Printing the steps that are executed
+- Cleanup `.gnugpg` directory
+- Make developmentVersion parameter optional
+
+### ⚙️ Miscellaneous Tasks
+
+- Upgrade to Java 25
+- Configure sortpom
+
 ## [5.1.3] - 2026-03-26
 
 ### 🚀 Features
