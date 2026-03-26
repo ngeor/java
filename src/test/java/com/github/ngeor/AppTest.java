@@ -18,7 +18,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 import uk.org.webcompere.systemstubs.stream.SystemErr;
-import uk.org.webcompere.systemstubs.stream.SystemOut;
 
 /**
  * Integration tests for {@link App}.
@@ -30,9 +29,6 @@ class AppTest {
 
     @TempDir
     private Path remoteDir;
-
-    @SystemStub
-    private SystemOut systemOut;
 
     @SystemStub
     private SystemErr systemErr;
@@ -285,7 +281,6 @@ class AppTest {
             softly.assertThat(workingDir.resolve("README.md").toFile().exists())
                     .as("README should be back after git pull")
                     .isTrue();
-            softly.assertThat(systemOut.getText()).isEmpty();
             softly.assertThat(systemErr.getText()).isEmpty();
         });
     }
@@ -304,7 +299,6 @@ class AppTest {
         List<String> tags = git.tag().lines().toList();
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemOut.getText()).isEmpty();
             softly.assertThat(systemErr.getText()).isEmpty();
             softly.assertThat(pomXmlContents)
                     .contains("<version>1.2.1-SNAPSHOT</version>")
@@ -339,7 +333,6 @@ class AppTest {
         List<String> tags = git.tag().lines().toList();
         SoftAssertions.assertSoftly(softly -> {
             softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemOut.getText()).isEmpty();
             softly.assertThat(systemErr.getText()).isEmpty();
             softly.assertThat(pomXmlContents)
                     .contains("<version>2.0.0-SNAPSHOT</version>")

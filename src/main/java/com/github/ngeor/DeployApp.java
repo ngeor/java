@@ -143,14 +143,8 @@ public final class DeployApp implements Callable<Integer> {
     }
 
     private void removeTempDirectory() {
-        if (tempMavenSettings != null) {
-            tempMavenSettings.toFile().delete();
-        }
-        if (tempGpgKey != null) {
-            tempGpgKey.toFile().delete();
-        }
         if (tempDirectory != null) {
-            tempDirectory.toFile().delete();
+            IOUtil.deleteRecursively(tempDirectory.toFile());
         }
     }
 }

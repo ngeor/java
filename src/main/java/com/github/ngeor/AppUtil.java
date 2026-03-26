@@ -10,6 +10,7 @@ public final class AppUtil {
         for (StepDefinition stepDefinition : steps) {
             try {
                 stepNumber++;
+                System.out.printf("%d/%d - %s%n", stepNumber, steps.size(), stepDefinition.name());
                 stepDefinition.step().run();
             } catch (ProcessFailException ex) {
                 System.err.printf(
