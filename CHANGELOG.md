@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.1.3] - 2026-03-26
+
+### 🚀 Features
+
+- Print output of maven release prepare
+
+### ⚙️ Miscellaneous Tasks
+
+- Faster way of installing git-cliff in pipeline
+
 ## [5.1.2] - 2026-03-25
 
 ### 🐛 Bug Fixes
