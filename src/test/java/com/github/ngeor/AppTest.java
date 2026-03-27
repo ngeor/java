@@ -8,17 +8,18 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.*;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 import uk.org.webcompere.systemstubs.stream.SystemErr;
@@ -42,411 +43,481 @@ class AppTest {
     private Git git;
 
     @BeforeEach
-    void beforeEach() throws InterruptedException {
+    void beforeEach() {
         git = new Git(workingDir.toFile());
-        Git remoteGit = new Git(remoteDir.toFile());
-        remoteGit.initBare("master");
     }
 
-    @ParameterizedTest
-    @ValueSource(
-            strings = {
-                ".",
-                "1",
-                "1.",
-                "1.2",
-                "1..2",
-                "1..2.3",
-                "1.2.3.4",
-                "1.2.3.abc",
-                "...",
-                "1.2.3",
-                "1.2.3-",
-                "1.2.3-FIX"
-            })
-    void testNonSemVerOrNonSnapshotDevelopmentVersion(String developmentVersion) {
-        // act
-        act(builder -> builder.releaseVersion("1.2.3").developmentVersion(developmentVersion));
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText()).contains("Invalid development version: " + developmentVersion);
-        });
-    }
+    /**
+     * Cheap unit tests that fail early on due to validation,
+     * before trying to invoke git.
+     */
+    @Nested
+    class NoGitTest {
 
-    @ParameterizedTest
-    @ValueSource(
-            strings = {
-                "",
-                ".",
-                "1",
-                "1.",
-                "1.2",
-                "1..2",
-                "1..2.3",
-                "1.2.3.4",
-                "1.2.3.abc",
-                "...",
-                "1.2.3-SNAPSHOT",
-                "1.2.3-"
-            })
-    void testNonSemVerOrSnapshotReleaseVersion(String releaseVersion) {
-        // act
-        act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("2.0.0-SNAPSHOT"));
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText()).contains("Invalid release version: " + releaseVersion);
-        });
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"1.2.3", "1.2.4", "1.3.0", "2.0.0"})
-    void testDevelopmentVersionMustBeGreaterThanReleaseVersion(String releaseVersion) {
-        // act
-        act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("1.2.3-SNAPSHOT"));
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText()).contains("Development version must be greater than release version");
-        });
-    }
-
-    @Test
-    void testDirectoryDoesNotExist() {
-        // act
-        act(workingDir.resolve("oops"));
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.resolve("oops").toAbsolutePath() + " does not exist");
-        });
-    }
-
-    @Test
-    void testDoesNotContainPomXml() {
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a pom.xml file");
-        });
-    }
-
-    @Test
-    void testDoesNotContainDotGit() throws IOException {
-        // arrange
-        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a .git directory");
-        });
-    }
-
-    @Test
-    void testGitDirectoryIsCorrupt() throws IOException {
-        // arrange
-        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
-        Files.createDirectory(workingDir.resolve(".git"));
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Ensure no pending git changes")
-                    .contains("not a git repository");
-        });
-    }
-
-    @Test
-    void testGitHasUntrackedFiles() throws InterruptedException, IOException {
-        // arrange
-        git.init();
-        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
-        });
-    }
-
-    @Test
-    void testGitHasStagedNonCommittedFiles() throws InterruptedException, IOException {
-        // arrange
-        git.init();
-        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
-        git.add("pom.xml");
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
-        });
-    }
-
-    @Test
-    void testNoGitRemote() throws InterruptedException, IOException {
-        // arrange
-        git.init();
-        git.configure("Dummy User", "dummy@user.com");
-        Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
-        git.add("pom.xml");
-        git.commit("Initial commit");
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Directory " + workingDir.toAbsolutePath() + " does not have exactly one git remote");
-        });
-    }
-
-    @Test
-    void testGitTagAlreadyExists() throws InterruptedException, IOException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        git.createTag("v1.2.0", "Releasing version 1.2.0");
-
-        // act
-        act();
-
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText()).contains("Git tag v1.2.0 already exists");
-        });
-    }
-
-    @ParameterizedTest
-    @MethodSource("existingTagsConflictingWithReleaseVersion")
-    void testGitTagsConflictingWithReleaseVersion(List<String> tags, String highestVersion)
-            throws InterruptedException, IOException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        for (String tag : tags) {
-            git.createTag(tag, "Releasing version " + tag);
+        @ParameterizedTest
+        @NullAndEmptySource
+        void testNullOrEmptyReleaseVersion(String releaseVersion) {
+            // act
+            act(builder ->
+                    builder.releaseVersion(Optional.ofNullable(releaseVersion)).developmentVersion("2.0.0-SNAPSHOT"));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText()).contains("Missing required parameter: '<releaseVersion>'");
+            });
         }
-        // act
-        act();
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isNotZero();
-            softly.assertThat(systemErr.getText())
-                    .contains("Release version 1.2.0 must be after version derived from git tag: " + highestVersion);
-        });
-    }
 
-    private static Stream<Arguments> existingTagsConflictingWithReleaseVersion() {
-        return Stream.of(
-                Arguments.of(List.of("1.2.0"), "1.2.0"),
-                Arguments.of(List.of("1.1.0", "1.2.0"), "1.2.0"),
-                Arguments.of(List.of("1.1.0", "1.3.0"), "1.3.0"),
-                Arguments.of(List.of("v1.3.0"), "1.3.0"),
-                Arguments.of(List.of("v1.3.0", "1.3.0"), "1.3.0"),
-                Arguments.of(List.of("v1.3.0", "1.2.1"), "1.3.0"),
-                Arguments.of(List.of("oops", "v.Oops", "1.4.0"), "1.4.0"));
-    }
-
-    @ParameterizedTest
-    @MethodSource("existingTagsWithoutConflictingWithReleaseVersion")
-    void testGitTagsWithoutConflictingWithReleaseVersion(List<String> tags) throws InterruptedException, IOException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        for (String tag : tags) {
-            git.createTag(tag, "Releasing version " + tag);
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    ".",
+                    "1",
+                    "1.",
+                    "1.2",
+                    "1..2",
+                    "1..2.3",
+                    "1.2.3.4",
+                    "1.2.3.abc",
+                    "...",
+                    "1.2.3-SNAPSHOT",
+                    "1.2.3-"
+                })
+        void testNonSemVerOrSnapshotReleaseVersion(String releaseVersion) {
+            // act
+            act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("2.0.0-SNAPSHOT"));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText()).contains("Invalid release version: " + releaseVersion);
+            });
         }
-        // act
-        act();
-        // assert
-        assertThat(exitCode).isZero();
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    ".",
+                    "1",
+                    "1.",
+                    "1.2",
+                    "1..2",
+                    "1..2.3",
+                    "1.2.3.4",
+                    "1.2.3.abc",
+                    "...",
+                    "1.2.3",
+                    "1.2.3-",
+                    "1.2.3-FIX"
+                })
+        void testNonSemVerOrNonSnapshotDevelopmentVersion(String developmentVersion) {
+            // act
+            act(builder -> builder.releaseVersion("1.2.3").developmentVersion(developmentVersion));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText()).contains("Invalid development version: " + developmentVersion);
+            });
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"1.2.3", "1.2.4", "1.3.0", "2.0.0"})
+        void testDevelopmentVersionMustBeGreaterThanReleaseVersion(String releaseVersion) {
+            // act
+            act(builder -> builder.releaseVersion(releaseVersion).developmentVersion("1.2.3-SNAPSHOT"));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Development version must be greater than release version");
+            });
+        }
+
+        @Test
+        void testDirectoryDoesNotExist() {
+            // act
+            act(workingDir.resolve("oops"));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.resolve("oops").toAbsolutePath() + " does not exist");
+            });
+        }
+
+        @Test
+        void testDoesNotContainPomXml() {
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a pom.xml file");
+            });
+        }
+
+        @Test
+        void testDoesNotContainDotGit() throws IOException {
+            // arrange
+            Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.toAbsolutePath() + " does not contain a .git directory");
+            });
+        }
     }
 
-    private static Stream<Arguments> existingTagsWithoutConflictingWithReleaseVersion() {
-        return Stream.of(
-                Arguments.of(List.of("1.1.0")),
-                Arguments.of(List.of("v1.1.0")),
-                Arguments.of(List.of("1.1.0", "1.1.1")),
-                Arguments.of(List.of("oops", "v.Oops")));
+    @Nested
+    class OtherTest {
+        @Test
+        void testGitDirectoryIsCorrupt() throws IOException {
+            // arrange
+            Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+            Files.createDirectory(workingDir.resolve(".git"));
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Ensure no pending git changes")
+                        .contains("not a git repository");
+            });
+        }
     }
 
-    @Test
-    void testNotOnDefaultBranch() throws InterruptedException, IOException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        // switch to a different branch
-        git.createAndSwitchToBranch("feature");
+    @Nested
+    class GitWithoutRemoteTest {
+        @BeforeEach()
+        void beforeEach() throws InterruptedException {
+            git.init();
+        }
 
-        // act
-        act();
+        @Test
+        void testGitHasUntrackedFiles() throws InterruptedException, IOException {
+            // arrange
+            Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
+            });
+        }
 
-        // assert
-        String currentBranch = git.getCurrentBranch();
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isZero();
-            softly.assertThat(currentBranch).isEqualTo("master");
-        });
+        @Test
+        void testGitHasStagedNonCommittedFiles() throws InterruptedException, IOException {
+            // arrange
+            Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+            git.add("pom.xml");
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.toAbsolutePath() + " contains pending git changes");
+            });
+        }
+
+        @Test
+        void testNoGitRemote() throws InterruptedException, IOException {
+            // arrange
+            git.configure("Dummy User", "dummy@user.com");
+            Files.writeString(workingDir.resolve("pom.xml"), "<project></project>");
+            git.add("pom.xml");
+            git.commit("Initial commit");
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains("Directory " + workingDir.toAbsolutePath() + " does not have exactly one git remote");
+            });
+        }
     }
 
-    @Test
-    void testGetsLatestFromUpstream() throws IOException, InterruptedException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        Files.writeString(workingDir.resolve("README.md"), "A readme file");
-        git.add("README.md");
-        git.commit("Added readme");
-        git.push();
+    @Nested
+    class GitWithRemoteTest {
+        @BeforeEach
+        void beforeEach() throws InterruptedException, IOException {
+            initRemoteGit();
+            cloneRepoAndPushInitialCommit();
+        }
 
-        git.reset(true, 1);
-        assertThat(workingDir.resolve("README.md").toFile().exists())
-                .as("README should be gone after git reset")
-                .isFalse();
+        @Test
+        void testGitTagAlreadyExists() throws InterruptedException {
+            // arrange
+            git.createTag("v1.2.0", "Releasing version 1.2.0");
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText()).contains("Git tag v1.2.0 already exists");
+            });
+        }
 
-        // act
-        act();
+        @ParameterizedTest
+        @MethodSource("existingTagsConflictingWithReleaseVersion")
+        void testGitTagsConflictingWithReleaseVersion(List<String> tags, String highestVersion)
+                throws InterruptedException {
+            // arrange
+            for (String tag : tags) {
+                git.createTag(tag, "Releasing version " + tag);
+            }
+            // act
+            act();
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText())
+                        .contains(
+                                "Release version 1.2.0 must be after version derived from git tag: " + highestVersion);
+            });
+        }
 
-        // assert
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isZero();
-            softly.assertThat(workingDir.resolve("README.md").toFile().exists())
-                    .as("README should be back after git pull")
-                    .isTrue();
-            softly.assertThat(systemErr.getText()).isEmpty();
-        });
-    }
+        private static Stream<Arguments> existingTagsConflictingWithReleaseVersion() {
+            return Stream.of(
+                    Arguments.of(List.of("1.2.0"), "1.2.0"),
+                    Arguments.of(List.of("1.1.0", "1.2.0"), "1.2.0"),
+                    Arguments.of(List.of("1.1.0", "1.3.0"), "1.3.0"),
+                    Arguments.of(List.of("v1.3.0"), "1.3.0"),
+                    Arguments.of(List.of("v1.3.0", "1.3.0"), "1.3.0"),
+                    Arguments.of(List.of("v1.3.0", "1.2.1"), "1.3.0"),
+                    Arguments.of(List.of("oops", "v.Oops", "1.4.0"), "1.4.0"));
+        }
 
-    @Test
-    void testFullFlow() throws IOException, InterruptedException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        final String tag = "v1.2.0";
+        @ParameterizedTest
+        @MethodSource("existingTagsWithoutConflictingWithReleaseVersion")
+        void testGitTagsWithoutConflictingWithReleaseVersion(List<String> tags) throws InterruptedException {
+            // arrange
+            for (String tag : tags) {
+                git.createTag(tag, "Releasing version " + tag);
+            }
+            // act
+            act();
+            // assert
+            assertThat(exitCode).isZero();
+        }
 
-        // act
-        act();
+        private static Stream<Arguments> existingTagsWithoutConflictingWithReleaseVersion() {
+            return Stream.of(
+                    Arguments.of(List.of("1.1.0")),
+                    Arguments.of(List.of("v1.1.0")),
+                    Arguments.of(List.of("1.1.0", "1.1.1")),
+                    Arguments.of(List.of("oops", "v.Oops")));
+        }
 
-        // assert
-        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        List<String> tags = git.tag().lines().toList();
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemErr.getText()).isEmpty();
-            softly.assertThat(pomXmlContents)
-                    .contains("<version>1.2.1-SNAPSHOT</version>")
-                    .contains("<tag>HEAD</tag>");
-            softly.assertThat(tags).containsExactly(tag);
-        });
-        assertThat(git.statusPorcelain())
-                .as("Should not have any pending changes")
-                .isEmpty();
-        git.switchToBranch(tag);
-        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
-                .contains("<version>1.2.0</version>")
-                .contains("<tag>" + tag + "</tag>"));
-        String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
-        assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
-    }
+        @Test
+        void testNotOnDefaultBranch() throws InterruptedException {
+            // arrange
+            // switch to a different branch
+            git.createAndSwitchToBranch("feature");
 
-    @Test
-    void testOptionalDevelopmentVersion() throws IOException, InterruptedException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        final String tag = "v1.2.0";
+            // act
+            act();
 
-        // act
-        act(builder -> builder.developmentVersion(Optional.empty()));
+            // assert
+            String currentBranch = git.getCurrentBranch();
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(currentBranch).isEqualTo("master");
+            });
+        }
 
-        // assert
-        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        List<String> tags = git.tag().lines().toList();
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemErr.getText()).isEmpty();
-            softly.assertThat(pomXmlContents)
-                    .contains("<version>1.3.0-SNAPSHOT</version>")
-                    .contains("<tag>HEAD</tag>");
-            softly.assertThat(tags).containsExactly(tag);
-        });
-        assertThat(git.statusPorcelain())
-                .as("Should not have any pending changes")
-                .isEmpty();
-        git.switchToBranch(tag);
-        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
-                .contains("<version>1.2.0</version>")
-                .contains("<tag>" + tag + "</tag>"));
-        String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
-        assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
-    }
+        @Test
+        void testGetsLatestFromUpstream() throws IOException, InterruptedException {
+            // arrange
+            Files.writeString(workingDir.resolve("README.md"), "A readme file");
+            git.add("README.md");
+            git.commit("Added readme");
+            git.push();
 
-    @Test
-    void testCustomTag() throws IOException, InterruptedException {
-        // arrange
-        cloneRepoAndPushInitialCommit();
-        final String tag = "java-1.9.0";
+            git.reset(true, 1);
+            assertThat(workingDir.resolve("README.md").toFile().exists())
+                    .as("README should be gone after git reset")
+                    .isFalse();
 
-        // act
-        act(builder -> builder.developmentVersion("2.0.0-SNAPSHOT")
-                .releaseVersion("1.9.0")
-                .tag(tag));
+            // act
+            act();
 
-        // assert
-        String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        List<String> tags = git.tag().lines().toList();
-        SoftAssertions.assertSoftly(softly -> {
-            softly.assertThat(exitCode).isZero();
-            softly.assertThat(systemErr.getText()).isEmpty();
-            softly.assertThat(pomXmlContents)
-                    .contains("<version>2.0.0-SNAPSHOT</version>")
-                    .contains("<tag>HEAD</tag>");
-            softly.assertThat(tags).containsExactly(tag);
-        });
-        git.switchToBranch(tag);
-        String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
-        SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
-                .contains("<version>1.9.0</version>")
-                .contains("<tag>" + tag + "</tag>"));
-    }
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(workingDir.resolve("README.md").toFile().exists())
+                        .as("README should be back after git pull")
+                        .isTrue();
+                softly.assertThat(systemErr.getText()).isEmpty();
+            });
+        }
 
-    private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
-        String remotePath = remoteDir.toAbsolutePath().toString();
-        git.clone(remotePath);
-        git.configure("Dummy User", "dummy@user.com");
-        String contents = IOUtil.readResource("/sample_pom.xml").replaceAll("\\$REMOTE", remotePath);
-        assertThat(contents).contains(remotePath);
-        Files.writeString(workingDir.resolve("pom.xml"), contents);
-        git.add("pom.xml");
-        Files.writeString(workingDir.resolve(".gitignore"), "target/");
-        git.add(".gitignore");
-        git.commit("feat: Initial commit");
-        // a push is needed to mark the default branch
-        git.push();
-        git.setRemoteHead("origin", "master");
+        @Test
+        void testFullFlow() throws IOException, InterruptedException {
+            // arrange
+            final String tag = "v1.2.0";
+            // act
+            act();
+            // assert
+            String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            List<String> tags = git.tag().lines().toList();
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(systemErr.getText()).isEmpty();
+                softly.assertThat(pomXmlContents)
+                        .contains("<version>1.2.1-SNAPSHOT</version>")
+                        .contains("<tag>HEAD</tag>");
+                softly.assertThat(tags).containsExactly(tag);
+            });
+            assertThat(git.statusPorcelain())
+                    .as("Should not have any pending changes")
+                    .isEmpty();
+            git.switchToBranch(tag);
+            String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                    .contains("<version>1.2.0</version>")
+                    .contains("<tag>" + tag + "</tag>"));
+            String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
+            assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
+        }
+
+        @ParameterizedTest
+        @CsvSource({"major, 2.0.0, 2.1.0-SNAPSHOT", "minor, 1.5.0, 1.6.0-SNAPSHOT", "patch, 1.4.3, 1.5.0-SNAPSHOT"})
+        void testFullFlowRelativeReleaseVersion(
+                String bump, String expectedReleaseVersion, String expectedDevelopmentVersion)
+                throws IOException, InterruptedException {
+            // arrange
+            String oldTag = "1.4.2";
+            git.createTag("v" + oldTag, "Releasing version " + oldTag);
+            Files.writeString(workingDir.resolve("README.md"), "Hello, world!");
+            git.add("README.md");
+            git.commit("feat: Added README");
+            git.pushFollowTags();
+            String expectedTag = "v" + expectedReleaseVersion;
+            // act
+            act(builder -> builder.releaseVersion(bump).developmentVersion(Optional.empty()));
+            // assert
+            String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            Set<String> tags = git.tag().lines().collect(Collectors.toSet());
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(systemErr.getText()).isEmpty();
+                softly.assertThat(pomXmlContents)
+                        .contains("<version>" + expectedDevelopmentVersion + "</version>")
+                        .contains("<tag>HEAD</tag>");
+                softly.assertThat(tags).contains(expectedTag);
+            });
+            assertThat(git.statusPorcelain())
+                    .as("Should not have any pending changes")
+                    .isEmpty();
+            git.switchToBranch(expectedTag);
+            String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                    .contains("<version>" + expectedReleaseVersion + "</version>")
+                    .contains("<tag>" + expectedTag + "</tag>"));
+            String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
+            assertThat(changeLogContents)
+                    .containsPattern("\\[%s\\][\\s\\S]+\\- Added README[\\s\\S]+\\[%s\\][\\s\\S]+\\- Initial commit"
+                            .formatted(expectedReleaseVersion, oldTag));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"major", "minor", "patch"})
+        void testRelativeReleaseVersionWithoutTags(String bump) {
+            // act
+            act(builder -> builder.releaseVersion(bump).developmentVersion(Optional.empty()));
+            // assert
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isNotZero();
+                softly.assertThat(systemErr.getText()).contains("No existing semver git tags");
+            });
+        }
+
+        @Test
+        void testOptionalDevelopmentVersion() throws IOException, InterruptedException {
+            // arrange
+            final String tag = "v1.2.0";
+
+            // act
+            act(builder -> builder.developmentVersion(Optional.empty()));
+
+            // assert
+            String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            List<String> tags = git.tag().lines().toList();
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(systemErr.getText()).isEmpty();
+                softly.assertThat(pomXmlContents)
+                        .contains("<version>1.3.0-SNAPSHOT</version>")
+                        .contains("<tag>HEAD</tag>");
+                softly.assertThat(tags).containsExactly(tag);
+            });
+            assertThat(git.statusPorcelain())
+                    .as("Should not have any pending changes")
+                    .isEmpty();
+            git.switchToBranch(tag);
+            String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                    .contains("<version>1.2.0</version>")
+                    .contains("<tag>" + tag + "</tag>"));
+            String changeLogContents = Files.readString(workingDir.resolve("CHANGELOG.md"));
+            assertThat(changeLogContents).contains("[1.2.0]").contains("- Initial commit");
+        }
+
+        @Test
+        void testCustomTag() throws IOException, InterruptedException {
+            // arrange
+            final String tag = "java-1.9.0";
+
+            // act
+            act(builder -> builder.developmentVersion("2.0.0-SNAPSHOT")
+                    .releaseVersion("1.9.0")
+                    .tag(tag));
+
+            // assert
+            String pomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            List<String> tags = git.tag().lines().toList();
+            SoftAssertions.assertSoftly(softly -> {
+                softly.assertThat(exitCode).isZero();
+                softly.assertThat(systemErr.getText()).isEmpty();
+                softly.assertThat(pomXmlContents)
+                        .contains("<version>2.0.0-SNAPSHOT</version>")
+                        .contains("<tag>HEAD</tag>");
+                softly.assertThat(tags).containsExactly(tag);
+            });
+            git.switchToBranch(tag);
+            String tagPomXmlContents = Files.readString(workingDir.resolve("pom.xml"));
+            SoftAssertions.assertSoftly(softly -> softly.assertThat(tagPomXmlContents)
+                    .contains("<version>1.9.0</version>")
+                    .contains("<tag>" + tag + "</tag>"));
+        }
+
+        private void initRemoteGit() throws InterruptedException {
+            Git remoteGit = new Git(remoteDir.toFile());
+            remoteGit.initBare("master");
+        }
+
+        private void cloneRepoAndPushInitialCommit() throws InterruptedException, IOException {
+            String remotePath = remoteDir.toAbsolutePath().toString();
+            git.clone(remotePath);
+            git.configure("Dummy User", "dummy@user.com");
+            String contents = IOUtil.readResource("/sample_pom.xml").replaceAll("\\$REMOTE", remotePath);
+            assertThat(contents).contains(remotePath);
+            Files.writeString(workingDir.resolve("pom.xml"), contents);
+            git.add("pom.xml");
+            Files.writeString(workingDir.resolve(".gitignore"), "target/");
+            git.add(".gitignore");
+            git.commit("feat: Initial commit");
+            // a push is needed to mark the default branch
+            git.push();
+            git.setRemoteHead("origin", "master");
+        }
     }
 
     private void act() {

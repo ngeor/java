@@ -23,7 +23,10 @@ public final class App implements Callable<Integer> {
                     "The next development version (defaults to the next minor version after the given release version)")
     private String developmentVersion;
 
-    @Parameters(description = "The release version", index = "0")
+    @Parameters(
+            description =
+                    "The release version. Can be specified as major|minor|patch to bump relatively to the highest semver git tag",
+            index = "0")
     private String releaseVersion;
 
     @Option(
@@ -37,6 +40,7 @@ public final class App implements Callable<Integer> {
     private String defaultBranch;
     private Maven maven;
     private SemVer releaseSemVer;
+    private final GitTags gitTags = new GitTags();
 
     private App() {}
 
@@ -56,12 +60,8 @@ public final class App implements Callable<Integer> {
         git = new Git(directory.toFile());
         maven = new Maven(directory.toFile());
 
-        if (tag == null || tag.isBlank()) {
-            tag = "v" + releaseVersion;
-        }
-
         List<StepDefinition> steps = List.of(
-                new StepDefinition("Validate release version", this::validateReleaseVersion),
+                new StepDefinition("Validate release version", new ValidateReleaseVersion()::validateReleaseVersion),
                 new StepDefinition("Validate development version", this::validateDevelopmentVersion),
                 new StepDefinition("Check if directory exists", this::validateDirectoryExists),
                 new StepDefinition("Check if pom.xml exists", this::validatePomXmlExists),
@@ -83,14 +83,38 @@ public final class App implements Callable<Integer> {
         return pipeline.call();
     }
 
-    private void validateReleaseVersion() {
-        try {
-            releaseSemVer = SemVer.parse(releaseVersion);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Invalid release version: " + releaseVersion, ex);
+    class ValidateReleaseVersion {
+
+        public void validateReleaseVersion() throws InterruptedException {
+            Validate.requireNotBlank(releaseVersion, "Missing required parameter: '<releaseVersion>'");
+            if (isRelativeBump()) {
+                validateRelativeReleaseVersion();
+            } else {
+                validateAbsoluteReleaseVersion();
+            }
         }
-        if (releaseSemVer.suffix() != null) {
-            throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
+
+        private boolean isRelativeBump() {
+            return SemVerBump.parse(releaseVersion).isPresent();
+        }
+
+        private void validateRelativeReleaseVersion() throws InterruptedException {
+            SemVer highestVersion = gitTags.highestVersion()
+                    .orElseThrow(() -> new IllegalStateException("No existing semver git tags"));
+            SemVerBump bump = SemVerBump.parse(releaseVersion)
+                    .orElseThrow(() -> new IllegalStateException("Invalid release version: " + releaseVersion));
+            releaseSemVer = highestVersion.bump(bump);
+        }
+
+        private void validateAbsoluteReleaseVersion() {
+            try {
+                releaseSemVer = SemVer.parse(releaseVersion);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid release version: " + releaseVersion, ex);
+            }
+            if (releaseSemVer.suffix() != null) {
+                throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
+            }
         }
     }
 
@@ -98,7 +122,8 @@ public final class App implements Callable<Integer> {
         final SemVer developmentSemVer;
 
         if (developmentVersion == null || developmentVersion.isBlank()) {
-            developmentVersion = new SemVer(releaseSemVer.major(), releaseSemVer.minor() + 1, 0, "SNAPSHOT").toString();
+            developmentVersion =
+                    releaseSemVer.bump(SemVerBump.MINOR).withSuffix("SNAPSHOT").toString();
         }
 
         try {
@@ -161,34 +186,60 @@ public final class App implements Callable<Integer> {
     }
 
     private void validateGitTags() throws InterruptedException {
-        Set<String> tags = git.tag().lines().collect(Collectors.toSet());
-        if (tags.contains(tag)) {
+        if (tag == null || tag.isBlank()) {
+            tag = "v" + releaseSemVer.toString();
+        }
+
+        if (gitTags.hasTag(tag)) {
             throw new IllegalStateException("Git tag " + tag + " already exists");
         }
 
-        SortedSet<SemVer> versionsFromTags = tags.stream()
-                .map(this::tryConvertTagToSemVer)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(TreeSet::new));
-        if (versionsFromTags.isEmpty()) {
-            return;
-        }
-        SemVer latestVersion = versionsFromTags.last();
-        if (releaseSemVer.compareTo(latestVersion) <= 0) {
+        SemVer latestVersion = gitTags.highestVersion().orElse(null);
+        if (latestVersion != null && releaseSemVer.compareTo(latestVersion) <= 0) {
             throw new IllegalStateException("Release version " + releaseSemVer
                     + " must be after version derived from git tag: " + latestVersion);
         }
     }
 
-    private SemVer tryConvertTagToSemVer(String tag) {
-        try {
-            if (tag.startsWith("v")) {
-                return SemVer.parse(tag.substring(1));
-            } else {
-                return SemVer.parse(tag);
+    class GitTags {
+        private Set<String> tags;
+        private SortedSet<SemVer> versions;
+
+        public boolean hasTag(String tag) throws InterruptedException {
+            load();
+            return tags.contains(tag);
+        }
+
+        public Optional<SemVer> highestVersion() throws InterruptedException {
+            load();
+            return versions.isEmpty() ? Optional.empty() : Optional.of(versions.last());
+        }
+
+        private boolean isLoaded() {
+            return tags != null && versions != null;
+        }
+
+        private void load() throws InterruptedException {
+            if (isLoaded()) {
+                return;
             }
-        } catch (IllegalArgumentException ex) {
-            return null;
+            tags = git.tag().lines().collect(Collectors.toSet());
+            versions = tags.stream()
+                    .map(this::tryConvertTagToSemVer)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toCollection(TreeSet::new));
+        }
+
+        private SemVer tryConvertTagToSemVer(String tag) {
+            try {
+                if (tag.startsWith("v")) {
+                    return SemVer.parse(tag.substring(1));
+                } else {
+                    return SemVer.parse(tag);
+                }
+            } catch (IllegalArgumentException ex) {
+                return null;
+            }
         }
     }
 
@@ -208,7 +259,7 @@ public final class App implements Callable<Integer> {
     private void prepareRelease() throws InterruptedException {
         maven.releasePrepare(new MavenPrepareOptionsBuilder()
                 .developmentVersion(developmentVersion)
-                .releaseVersion(releaseVersion)
+                .releaseVersion(releaseSemVer.toString())
                 .tag(tag)
                 // git-cliff has modified it so ignore that it is modified
                 .checkModificationExcludeList("CHANGELOG.md")

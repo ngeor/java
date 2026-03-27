@@ -68,4 +68,16 @@ public record SemVer(int major, int minor, int patch, String suffix) implements 
             return new SemVer(major, minor, patch, suffix);
         }
     }
+
+    public SemVer bump(SemVerBump semVerBump) {
+        return switch (semVerBump) {
+            case MAJOR -> new SemVer(major + 1, 0, 0, suffix);
+            case MINOR -> new SemVer(major, minor + 1, 0, suffix);
+            case PATCH -> new SemVer(major, minor, patch + 1, suffix);
+        };
+    }
+
+    public SemVer withSuffix(String suffix) {
+        return new SemVer(major, minor, patch, suffix);
+    }
 }

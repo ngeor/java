@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class SemVerTest {
@@ -154,6 +155,64 @@ class SemVerTest {
             SemVer v1 = new SemVer(1, 2, 3, null);
             SemVer v2 = new SemVer(1, 2, 3, null);
             assertThat(v1).isEqualByComparingTo(v2);
+        }
+    }
+
+    @Nested
+    class BumpTest {
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = "beta")
+        void major(String suffix) {
+            SemVer semVer = new SemVer(1, 2, 3, suffix);
+            SemVer bumped = semVer.bump(SemVerBump.MAJOR);
+            assertThat(bumped.major()).isEqualTo(2);
+            assertThat(bumped.minor()).isZero();
+            assertThat(bumped.patch()).isZero();
+            assertThat(bumped.suffix()).isEqualTo(suffix);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = "beta")
+        void minor(String suffix) {
+            SemVer semVer = new SemVer(1, 2, 3, suffix);
+            SemVer bumped = semVer.bump(SemVerBump.MINOR);
+            assertThat(bumped.major()).isEqualTo(1);
+            assertThat(bumped.minor()).isEqualTo(3);
+            assertThat(bumped.patch()).isZero();
+            assertThat(bumped.suffix()).isEqualTo(suffix);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = "beta")
+        void patch(String suffix) {
+            SemVer semVer = new SemVer(1, 2, 3, suffix);
+            SemVer bumped = semVer.bump(SemVerBump.PATCH);
+            assertThat(bumped.major()).isEqualTo(1);
+            assertThat(bumped.minor()).isEqualTo(2);
+            assertThat(bumped.patch()).isEqualTo(4);
+            assertThat(bumped.suffix()).isEqualTo(suffix);
+        }
+    }
+
+    @Nested
+    class WithSuffixTest {
+        @ParameterizedTest
+        @NullSource
+        @ValueSource(strings = "beta")
+        void addOrChangeSuffix(String oldSuffix) {
+            SemVer semVer = new SemVer(1, 2, 3, oldSuffix);
+            SemVer result = semVer.withSuffix("alpha");
+            assertThat(result.suffix()).isEqualTo("alpha");
+        }
+
+        @Test
+        void removeSuffix() {
+            SemVer semVer = new SemVer(1, 2, 3, "beta");
+            SemVer result = semVer.withSuffix(null);
+            assertThat(result.suffix()).isNull();
         }
     }
 }
