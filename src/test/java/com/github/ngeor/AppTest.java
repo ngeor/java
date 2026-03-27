@@ -9,12 +9,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
@@ -238,6 +241,58 @@ class AppTest {
             softly.assertThat(exitCode).isNotZero();
             softly.assertThat(systemErr.getText()).contains("Git tag v1.2.0 already exists");
         });
+    }
+
+    @ParameterizedTest
+    @MethodSource("existingTagsConflictingWithReleaseVersion")
+    void testGitTagsConflictingWithReleaseVersion(List<String> tags, String highestVersion)
+            throws InterruptedException, IOException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        for (String tag : tags) {
+            git.createTag(tag, "Releasing version " + tag);
+        }
+        // act
+        act();
+        // assert
+        SoftAssertions.assertSoftly(softly -> {
+            softly.assertThat(exitCode).isNotZero();
+            softly.assertThat(systemErr.getText())
+                    .contains("Release version 1.2.0 must be after version derived from git tag: " + highestVersion);
+        });
+    }
+
+    private static Stream<Arguments> existingTagsConflictingWithReleaseVersion() {
+        return Stream.of(
+                Arguments.of(List.of("1.2.0"), "1.2.0"),
+                Arguments.of(List.of("1.1.0", "1.2.0"), "1.2.0"),
+                Arguments.of(List.of("1.1.0", "1.3.0"), "1.3.0"),
+                Arguments.of(List.of("v1.3.0"), "1.3.0"),
+                Arguments.of(List.of("v1.3.0", "1.3.0"), "1.3.0"),
+                Arguments.of(List.of("v1.3.0", "1.2.1"), "1.3.0"),
+                Arguments.of(List.of("oops", "v.Oops", "1.4.0"), "1.4.0"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("existingTagsWithoutConflictingWithReleaseVersion")
+    void testGitTagsWithoutConflictingWithReleaseVersion(List<String> tags) throws InterruptedException, IOException {
+        // arrange
+        cloneRepoAndPushInitialCommit();
+        for (String tag : tags) {
+            git.createTag(tag, "Releasing version " + tag);
+        }
+        // act
+        act();
+        // assert
+        assertThat(exitCode).isZero();
+    }
+
+    private static Stream<Arguments> existingTagsWithoutConflictingWithReleaseVersion() {
+        return Stream.of(
+                Arguments.of(List.of("1.1.0")),
+                Arguments.of(List.of("v1.1.0")),
+                Arguments.of(List.of("1.1.0", "1.1.1")),
+                Arguments.of(List.of("oops", "v.Oops")));
     }
 
     @Test

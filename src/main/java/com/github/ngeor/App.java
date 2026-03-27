@@ -1,9 +1,9 @@
 package com.github.ngeor;
 
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -69,7 +69,7 @@ public final class App implements Callable<Integer> {
                 new StepDefinition("Ensure single git remote", this::validateSingleRemote),
                 new StepDefinition("Get current git branch", this::getCurrentBranch),
                 new StepDefinition("Get default git branch", this::getDefaultBranch),
-                new StepDefinition("Ensure git tag does not exist", this::ensureGitTagDoesNotExist),
+                new StepDefinition("Validate git tags", this::validateGitTags),
                 new StepDefinition("Ensure on default git branch", this::ensureOnDefaultBranch),
                 new StepDefinition("Get latest changes from upstream", git::pull),
                 new StepDefinition("Clean Maven release", maven::releaseClean),
@@ -159,9 +159,35 @@ public final class App implements Callable<Integer> {
         defaultBranch = git.getDefaultBranch(remote);
     }
 
-    private void ensureGitTagDoesNotExist() throws InterruptedException {
-        if (git.tag().lines().anyMatch(tag::equals)) {
+    private void validateGitTags() throws InterruptedException {
+        Set<String> tags = git.tag().lines().collect(Collectors.toSet());
+        if (tags.contains(tag)) {
             throw new IllegalStateException("Git tag " + tag + " already exists");
+        }
+
+        SortedSet<SemVer> versionsFromTags = tags.stream()
+                .map(this::tryConvertTagToSemVer)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(TreeSet::new));
+        if (versionsFromTags.isEmpty()) {
+            return;
+        }
+        SemVer latestVersion = versionsFromTags.last();
+        if (releaseSemVer.compareTo(latestVersion) <= 0) {
+            throw new IllegalStateException("Release version " + releaseSemVer
+                    + " must be after version derived from git tag: " + latestVersion);
+        }
+    }
+
+    private SemVer tryConvertTagToSemVer(String tag) {
+        try {
+            if (tag.startsWith("v")) {
+                return SemVer.parse(tag.substring(1));
+            } else {
+                return SemVer.parse(tag);
+            }
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 
