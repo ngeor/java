@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.4.0] - 2026-03-27
+
+### 🚀 Features
+
+- Ensure release version is after semver git tags
+- [**breaking**] Change release version into a positional argument
+- Support relative release versions (major, minor, patch)
+
+### 🚜 Refactor
+
+- Split ValidateSemVer into two steps
+
 ## [5.3.1] - 2026-03-26
 
 ### 🐛 Bug Fixes
