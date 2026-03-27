@@ -35,6 +35,7 @@ public final class App implements Callable<Integer> {
     private String currentBranch;
     private String defaultBranch;
     private Maven maven;
+    private SemVer releaseSemVer;
 
     private App() {}
 
@@ -59,7 +60,8 @@ public final class App implements Callable<Integer> {
         }
 
         List<StepDefinition> steps = List.of(
-                new StepDefinition("Validate SemVer", this::validateSemVer),
+                new StepDefinition("Validate release version", this::validateReleaseVersion),
+                new StepDefinition("Validate development version", this::validateDevelopmentVersion),
                 new StepDefinition("Check if directory exists", this::validateDirectoryExists),
                 new StepDefinition("Check if pom.xml exists", this::validatePomXmlExists),
                 new StepDefinition("Check if directory is a git working directory", this::validateGitDirectoryExists),
@@ -80,8 +82,7 @@ public final class App implements Callable<Integer> {
         return pipeline.call();
     }
 
-    private void validateSemVer() {
-        final SemVer releaseSemVer;
+    private void validateReleaseVersion() {
         try {
             releaseSemVer = SemVer.parse(releaseVersion);
         } catch (IllegalArgumentException ex) {
@@ -90,7 +91,9 @@ public final class App implements Callable<Integer> {
         if (releaseSemVer.suffix() != null) {
             throw new IllegalArgumentException("Invalid release version: " + releaseVersion);
         }
+    }
 
+    private void validateDevelopmentVersion() {
         final SemVer developmentSemVer;
 
         if (developmentVersion == null || developmentVersion.isBlank()) {
