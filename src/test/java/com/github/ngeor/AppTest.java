@@ -466,8 +466,8 @@ class AppTest {
                 .build();
         List<String> args = new ArrayList<>(List.of("--directory", options.directory()));
         options.developmentVersion().ifPresent(s -> args.addAll(List.of("--development-version", s)));
-        options.releaseVersion().ifPresent(s -> args.addAll(List.of("--release-version", s)));
         options.tag().ifPresent(s -> args.addAll(List.of("--tag", s)));
+        options.releaseVersion().ifPresent(args::add);
         exitCode = App.executeWithoutExiting(args.toArray(String[]::new));
     }
 }

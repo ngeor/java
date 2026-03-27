@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
  * A CLI that releases a Java library.
@@ -22,7 +23,7 @@ public final class App implements Callable<Integer> {
                     "The next development version (defaults to the next minor version after the given release version)")
     private String developmentVersion;
 
-    @Option(names = "--release-version", description = "The release version", required = true)
+    @Parameters(description = "The release version", index = "0")
     private String releaseVersion;
 
     @Option(
