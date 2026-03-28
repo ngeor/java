@@ -1,7 +1,8 @@
-# Changelog
+## [5.5.0] - 2026-03-28
 
-All notable changes to this project will be documented in this file.
+### 🚀 Features
 
+- Use temp directory as GPG home directory
 ## [5.4.0] - 2026-03-27
 
 ### 🚀 Features
@@ -13,19 +14,16 @@ All notable changes to this project will be documented in this file.
 ### 🚜 Refactor
 
 - Split ValidateSemVer into two steps
-
 ## [5.3.1] - 2026-03-26
 
 ### 🐛 Bug Fixes
 
 - Incorrect path for gpg
-
 ## [5.3.0] - 2026-03-26
 
 ### 🚜 Refactor
 
 - Implement Pipeline to handle teardown steps
-
 ## [5.2.0] - 2026-03-26
 
 ### 🚀 Features
@@ -38,7 +36,6 @@ All notable changes to this project will be documented in this file.
 
 - Upgrade to Java 25
 - Configure sortpom
-
 ## [5.1.3] - 2026-03-26
 
 ### 🚀 Features
@@ -48,19 +45,16 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Faster way of installing git-cliff in pipeline
-
 ## [5.1.2] - 2026-03-25
 
 ### 🐛 Bug Fixes
 
 - Removed incorrect cli argument
-
 ## [5.1.1] - 2026-03-25
 
 ### 🐛 Bug Fixes
 
 - Fixed extra hyphen in argument
-
 ## [5.1.0] - 2026-03-25
 
 ### 🚀 Features
@@ -74,13 +68,11 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Delete obsolete scripts
-
 ## [5.0.0] - 2026-03-24
 
 ### 🚀 Features
 
 - [**breaking**] Repurpose repo to be a CLI tool that releases Java libraries (#87)
-
 ## [4.11.0] - 2026-03-17
 
 ### 🚀 Features
@@ -106,7 +98,6 @@ All notable changes to this project will be documented in this file.
 - Removed .gitattributes
 - Removed renovate.json
 - [**breaking**] Added deprecation notice, deleted old scripts
-
 ## [4.10.0] - 2025-11-15
 
 ### 🚀 Features
@@ -123,31 +114,26 @@ All notable changes to this project will be documented in this file.
 
 - Update gitignore
 - Upgraded dependencies
-
 ## [4.9.9] - 2025-09-24
 
 ### 🚀 Features
 
 - [**breaking**] Support custom location for `keys.asc` and `pom.xml`
-
 ## [4.9.7] - 2025-09-24
 
 ### 🐛 Bug Fixes
 
 - Use MAVEN_GPG_PASSPHRASE env variable
-
 ## [4.9.6] - 2025-09-24
 
 ### 🚀 Features
 
 - Making release output quieter
-
 ## [4.9.5] - 2025-09-24
 
 ### 🐛 Bug Fixes
 
 - Switch to PIPE
-
 ## [4.9.4] - 2025-09-24
 
 ### 🚜 Refactor
@@ -157,48 +143,41 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Added Pipfile for release.py
-
 ## [4.9.3] - 2025-09-24
 
 ### ⚙️ Miscellaneous Tasks
 
 - Updated changelog
 - Migrate from OSSRH to Central Maven
-
 ## [4.9.2] - 2025-02-24
 
 ### 🐛 Bug Fixes
 
 - Adding back dependency management for 3 libraries
-
 ## [4.9.1] - 2025-02-17
 
 ### ⚙️ Miscellaneous Tasks
 
 - Moved java back to its own repo
-
 ## [4.2.0] - 2024-01-26
+
+### 💼 Other
+
+- Updated dependency versions
 
 ### ⚙️ Miscellaneous Tasks
 
 - Updated readme
-
-### Deps
-
-- Updated dependency versions
-
 ## [4.1.1] - 2022-12-08
 
 ### ⚙️ Miscellaneous Tasks
 
 - Fix deployment
-
 ## [4.1.0] - 2022-12-08
 
 ### 🚀 Features
 
 - Added sortpom
-
 ## [4.0.0] - 2022-12-08
 
 ### ⚙️ Miscellaneous Tasks
@@ -206,7 +185,6 @@ All notable changes to this project will be documented in this file.
 - [**breaking**] Upgraded to Java 17
 - [**breaking**] Removed dependency management and most plugins
 - Updated CI for Java 17
-
 ## [3.3.0] - 2022-09-07
 
 ### 🚀 Features
@@ -216,7 +194,6 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - *(changelog)* Update changelog for 3.2.0
-
 ## [3.2.0] - 2022-06-12
 
 ### ⚙️ Miscellaneous Tasks
@@ -228,7 +205,6 @@ All notable changes to this project will be documented in this file.
 - Group dependencies separately in changelog
 - *(changelog)* Updated changelog
 - *(changelog)* Updated changelog
-
 ## [3.1.1] - 2022-02-05
 
 ### 🐛 Bug Fixes
@@ -238,7 +214,6 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - *(changelog)* Update changelog for 3.1.0
-
 ## [3.1.0] - 2022-02-05
 
 ### 🚀 Features
@@ -249,7 +224,6 @@ All notable changes to this project will be documented in this file.
 
 - *(changelog)* Updated changelog
 - *(changelog)* Updated changelog
-
 ## [3.0.0] - 2022-02-02
 
 ### 🚀 Features
@@ -260,7 +234,6 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - *(changelog)* Updated changelog
-
 ## [2.4.0] - 2022-01-27
 
 ### 🚀 Features
@@ -270,7 +243,6 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 
 - Make release script executable upon copying to other repo
-
 ## [2.3.0] - 2022-01-26
 
 ### 🚀 Features
@@ -286,7 +258,6 @@ All notable changes to this project will be documented in this file.
 - *(changelog)* Updated changelog
 - Removed unused workflow
 - Removed duplicate badge
-
 ## [2.2.1] - 2022-01-26
 
 ### 🚀 Features
@@ -297,20 +268,16 @@ All notable changes to this project will be documented in this file.
 ### ⚙️ Miscellaneous Tasks
 
 - Update readme
-
 ## [2.2.0] - 2022-01-23
 
 ### 🚀 Features
 
 - Testing release branch
 - Performing release
-
 ## [1.0.0] - 2021-06-26
 
-### Yak4j-cli
+### 💼 Other
 
 - Registering new module in parent pom
 - Added picocli
 - Added list command
-
-<!-- generated by git-cliff -->
