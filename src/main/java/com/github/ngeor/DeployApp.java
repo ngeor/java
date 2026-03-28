@@ -57,21 +57,17 @@ public final class DeployApp implements Callable<Integer> {
     public Integer call() throws InterruptedException {
         directory = directory.toAbsolutePath().normalize();
         maven = new Maven(directory.toFile());
-        gpg = new Gpg(directory.toFile());
 
         List<StepDefinition> steps = List.of(
-                // Lists the GPG keys.
-                // This is mainly used as a workaround to prime the gpg folders before importing the keys.
-                new StepDefinition("Prepare GPG", gpg::listKeys),
                 new StepDefinition("Create temp directory", this::createTempDirectory),
+                new StepDefinition("Prepare GPG", this::prepareGpg),
                 new StepDefinition("Write GPG key to file", this::writeGpgKeyContentsToFile),
                 new StepDefinition("Import GPG key", this::importGpgKey),
                 new StepDefinition("Write temp Maven settings", this::writeTempMavenSettings),
                 new StepDefinition("Deploy", this::deploy));
 
-        List<StepDefinition> tearDownSteps = List.of(
-                new StepDefinition("Remove temp directory", this::removeTempDirectory),
-                new StepDefinition("Remove GPG directory", this::removeGpgDirectory));
+        List<StepDefinition> tearDownSteps =
+                List.of(new StepDefinition("Remove temp directory", this::removeTempDirectory));
 
         Pipeline pipeline = new Pipeline(steps, tearDownSteps);
         return pipeline.call();
@@ -83,6 +79,15 @@ public final class DeployApp implements Callable<Integer> {
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
+    }
+
+    private void prepareGpg() throws InterruptedException {
+        // use the tempDirectory as GPG's home directory,
+        // to not interfere with any existing GPG keys
+        gpg = new Gpg(tempDirectory.toFile());
+        // Lists the GPG keys.
+        // This is mainly used as a workaround to prime the gpg folders before importing the keys.
+        gpg.listKeys();
     }
 
     private void writeGpgKeyContentsToFile() {
@@ -122,6 +127,10 @@ public final class DeployApp implements Callable<Integer> {
 
     private void deploy() throws InterruptedException {
         maven.deploy(
+                // The env variable name where the GnuPG passphrase is set.
+                // This is the recommended way to pass passphrase for signing in batch mode execution of Maven.
+                // The default value is MAVEN_GPG_PASSPHRASE.
+                // It is possible to override with user property `gpg.passphraseEnvName`.
                 Map.of("MAVEN_GPG_PASSPHRASE", gpgPassphrase),
                 "-s",
                 tempMavenSettings.toString(),
@@ -139,22 +148,17 @@ public final class DeployApp implements Callable<Integer> {
                 "-Dspotless.check.skip=true",
                 // skip sortpom
                 "-Dsort.skip=true",
+                // activate gpg profile (the project that is deployed needs to have this)
                 "-Pgpg",
-                "-Dgpg.keyname=" + gpgKeyName);
+                // specify the GPG key name
+                "-Dgpg.keyname=" + gpgKeyName,
+                // use the temp directory as GPG's homedir to find the keys
+                "-Dgpg.homedir=" + tempDirectory.toString());
     }
 
     private void removeTempDirectory() {
         if (tempDirectory != null) {
             IOUtil.deleteRecursively(tempDirectory.toFile());
         }
-    }
-
-    private void removeGpgDirectory() {
-        String userHome = System.getProperty("user.home");
-        if (userHome == null || userHome.isBlank()) {
-            return;
-        }
-        Path gpgPath = Path.of(userHome, ".gnupg");
-        IOUtil.deleteRecursively(gpgPath.toFile());
     }
 }

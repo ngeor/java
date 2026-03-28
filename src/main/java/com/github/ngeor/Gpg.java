@@ -8,8 +8,8 @@ import java.util.List;
 public class Gpg {
     private final ProcessHelper processHelper;
 
-    public Gpg(File directory) {
-        this.processHelper = new ProcessHelper(directory, "gpg");
+    public Gpg(File homeDirectory) {
+        this.processHelper = new ProcessHelper(homeDirectory, "gpg", "--homedir", homeDirectory.toString());
     }
 
     public void listKeys() throws InterruptedException {
