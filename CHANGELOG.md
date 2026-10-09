@@ -1,3 +1,8 @@
+## [5.6.0] - 2026-10-09
+
+### ⚙️ Miscellaneous Tasks
+
+- Upgrade dependencies
 ## [5.5.0] - 2026-03-28
 
 ### 🚀 Features
